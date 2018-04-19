@@ -7,12 +7,11 @@ class MolObject(object):
     def __init__(self, initial=False):
         self.score = 0.0
         self.eng = 0.0
-        self.groupID = 0
         self.coords = []
     
     #----------------------------------------------------
     def __str__(self):
-        return '%s %s' %(self.score, self.eng)
+        return 'placeholder'
     #----------------------------------------------------
     def Mutate(self):
 #        ranNum = random()
@@ -25,13 +24,13 @@ class MolObject(object):
         import copy
         nPart = len(self.coords)
         nSel = int(floor(random()*nPart))
-        dx = 0.1*(2.0*random()-1.0)
-        dy = 0.1*(2.0*random()-1.0)
-        dz = 0.1*(2.0*random()-1.0)
+        dx = 0.1*random()
+        dy = 0.1*random()
+        dz = 0.1*random()
         newCoords = copy.deepcopy(self.coords)
-        newCoords[nSel][1] += dx
-        newCoords[nSel][2] += dy
-        newCoords[nSel][3] += dz
+        newCoords[nSel][0] += dx
+        newCoords[nSel][1] += dy
+        newCoords[nSel][2] += dz
         newObj = MolObject()
         newObj.setfeature(newCoords=newCoords)
         newObj.computescore()
@@ -43,19 +42,19 @@ class MolObject(object):
         import copy
         newCoords = copy.deepcopy(self.coords)
         for i, atom in enumerate(newCoords):
-            dx = 0.1 * (2.0*random()-1.0)
-            dy = 0.1 * (2.0*random()-1.0)
-            dz = 0.1 * (2.0*random()-1.0)
-            newCoords[i][1] += dx
-            newCoords[i][2] += dy
-            newCoords[i][3] += dz
+            dx = 0.1 * random()
+            dy = 0.1 * random()
+            dz = 0.1 * random()
+            newCoords[i][0] += dx
+            newCoords[i][1] += dy
+            newCoords[i][2] += dz
         newObj = MolObject()
         newObj.setfeature(newCoords=newCoords)
         newObj.computescore()
         return newObj
      #----------------------------------------------------
-#    def Mate(self, partner):
-#        return newObj
+    def Mate(self, partner):
+        return newObj
 
     #----------------------------------------------------
     def setscore(self, score):
@@ -72,40 +71,31 @@ class MolObject(object):
     def geteng(self):
         return self.score
     #----------------------------------------------------
-    def geteng(self):
-        return self.score
-
-    #----------------------------------------------------
     def setfeature(self, newCoords):
-        self.coords = newCoords
+        import copy
+        self.coords = copy.deepcopy(newCoords)
     #----------------------------------------------------
-    def copyfeature(self, copyobj):
-        newCoords = copyobj.getfeature()
-        self.setfeature(newCoords)
+#    def copyfeature(self, copyobj):
+#        x,y,r = copyobj.getfeature()
+#        self.setfeature(x=x, y=y)
+
    #----------------------------------------------------
     def getfeature(self):
-        return self.coords
+        self.r = self.x**2 + self.y**2
+        self.r = sqrt(self.r)
+        return self.x, self.y, self.r
    #----------------------------------------------------
     def findgroup(self):
-        groupID = 0
+        groupID = floor(self.dr*self.r)/self.dr
 
         return groupID
    #----------------------------------------------------
 #============================================================
 def objFunc(obj):
-    from lammps import PyLammps, lammps  
-    sim = lammps()
-    PyLmps = PyLammps(ptr=sim)
-    sim.command("region box block -1000 -1000 -1000 1000 1000 1000")
-    coords = obj.getfeature()
-    for atom in coords:
-        sim.command("create_atoms %s single %s %s %s" % (tuple(atom))
-    result = PyLmps.eval("pe")
-
-
-
-
-
+    x, y, r = obj.getfeature()
+#    r = x*x + y*y
+#    r = sqrt(r)
+    val = obj.degen*exp(-eng/10000.5)
     return val, eng
 
 
