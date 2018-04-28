@@ -8,15 +8,23 @@ class MolObject(object):
         self.score = 0.0
         self.eng = 0.0
         self.groupID = 0
+        self.ffFile = ""
         self.coords = []
     
     #----------------------------------------------------
     def __str__(self):
         return '%s %s' %(self.score, self.eng)
     #----------------------------------------------------
+    def setForcefield(self, filename):
+        self.ffFile = str(filename)
+
+    #----------------------------------------------------
     def Mutate(self):
-#        ranNum = random()
-        newObj = self.Mutate_SingleMove()
+        ranNum = random()
+        if ranNum < 0.1:
+            newObj = self.Mutate_SingleMove()
+        else:
+            newObj = self.Mutate_AllMove()
         return newObj
 
     # ----------------------------------------------------
@@ -43,9 +51,9 @@ class MolObject(object):
         import copy
         newCoords = copy.deepcopy(self.coords)
         for i, atom in enumerate(newCoords):
-            dx = 0.1 * (2.0*random()-1.0)
-            dy = 0.1 * (2.0*random()-1.0)
-            dz = 0.1 * (2.0*random()-1.0)
+            dx = 0.01 * (2.0*random()-1.0)
+            dy = 0.01 * (2.0*random()-1.0)
+            dz = 0.01 * (2.0*random()-1.0)
             newCoords[i][1] += dx
             newCoords[i][2] += dy
             newCoords[i][3] += dz
@@ -70,10 +78,7 @@ class MolObject(object):
         self.eng = eng
     #----------------------------------------------------
     def geteng(self):
-        return self.score
-    #----------------------------------------------------
-    def geteng(self):
-        return self.score
+        return self.seng
 
     #----------------------------------------------------
     def setfeature(self, newCoords):
@@ -86,6 +91,10 @@ class MolObject(object):
     def getfeature(self):
         return self.coords
    #----------------------------------------------------
+    def getffFile(self):
+        return self.ffFile
+
+   #----------------------------------------------------
     def findgroup(self):
         groupID = 0
 
@@ -97,14 +106,16 @@ def objFunc(obj):
     sim = lammps()
     PyLmps = PyLammps(ptr=sim)
     sim.command("region box block -1000 -1000 -1000 1000 1000 1000")
+    sim.command("create_box 2 box")
     coords = obj.getfeature()
     for atom in coords:
         sim.command("create_atoms %s single %s %s %s" % (tuple(atom))
-    result = PyLmps.eval("pe")
-
-
-
-
+    sim.command("read_data %s"%( obj.getffFile() ) )
+#    sim.command("minimize 0.0 1.0e-8 1 1")
+#    sim.command("minimize 0.0 1.0e-8 1000000 10000000")
+    eng = PyLmps.eval("pe")
+    val = exp(-eng/(1.987e-3*300))
+    print val, eng
 
     return val, eng
 
