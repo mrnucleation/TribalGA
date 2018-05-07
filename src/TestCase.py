@@ -16,7 +16,9 @@ def main():
     init = MolObject()
     coords = [ [1, 1.0, 0.0, 0.0],
                [1, 0.0, 0.0, 0.0] ]
-    init.setFeature(coords)
+    init.setfeature(coords)
+    init.computescore()
+    print "Computed Score"
     tribeTest.AddMember(init)
 
 #    for i in range(30):
@@ -27,7 +29,7 @@ def main():
 #    dr = 7.0/1000.0
 #    for i in range(1000):
 #        hist.append(0.0)
-
+    print "Start Simulation"
     for i in range(int(2e9)):
         ranNum = random()
         if ranNum < 0.00001:

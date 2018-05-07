@@ -1,5 +1,5 @@
 from random import random
-from math import exp, sqrt
+from math import exp, sqrt, floor
 from lammps import lammps
 
 class MolObject(object):
@@ -10,7 +10,8 @@ class MolObject(object):
         self.groupID = 0
         self.ffFile = ""
         self.coords = []
-        self.dR = 20.0/2000.0
+        self.dr = 20.0/2000.0
+        self.r = 0.0
     
     #----------------------------------------------------
     def __str__(self):
@@ -30,7 +31,6 @@ class MolObject(object):
 
     # ----------------------------------------------------
     def Mutate_SingleMove(self):
-        from math import floor
         import copy
         nPart = len(self.coords)
         nSel = int(floor(random()*nPart))
@@ -83,8 +83,10 @@ class MolObject(object):
         self.r = sqrt(rx*rx + ry*ry + rz*rz)
 
         score, eng = objFunc(self)
+        print score, eng
         self.score = score
         self.eng = eng
+        return
     #----------------------------------------------------
     def geteng(self):
         return self.eng
@@ -113,22 +115,26 @@ def objFunc(obj):
     from lammps import PyLammps, lammps  
     sim = lammps()
     PyLmps = PyLammps(ptr=sim)
-    sim.command("region box block -10 -10 -10 10 10 10")
-    sim.command("create_box 2 box")
+    sim.command("atom_style atomic")
+    sim.command("region box block -10 10 -10 10 -10 10")
     sim.command("boundary p p p")
+    sim.command("create_box 1 box")
     sim.command("pair_style lj/cut 2.5")
     sim.command("pair_coeff * * 1.0 1.0 2.5")
+    sim.command("mass 1 1.0")
     coords = obj.getfeature()
     for atom in coords:
         sim.command("create_atoms %s single %s %s %s" % (tuple(atom)))
-    sim.command("read_data %s"%( obj.getffFile() ) )
-#    sim.command("minimize 0.0 1.0e-8 1 1")
+#    sim.command("read_data %s"%( obj.getffFile() ) )
 #    sim.command("minimize 0.0 1.0e-8 1000000 10000000")
+    sim.command("run 0")
+#    print "run 0"
+#    PyLmps.run(1, "pre no post no")
     eng = PyLmps.eval("pe")
 #    val = exp(-eng/(1.987e-3*300))
     val = exp(-2*eng)
     print val, eng
-
+#    sim.command("quit ")
     return val, eng
 
 
