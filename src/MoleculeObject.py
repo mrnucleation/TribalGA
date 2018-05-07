@@ -10,6 +10,7 @@ class MolObject(object):
         self.groupID = 0
         self.ffFile = ""
         self.coords = []
+        self.dR = 20.0/2000.0
     
     #----------------------------------------------------
     def __str__(self):
@@ -64,6 +65,9 @@ class MolObject(object):
      #----------------------------------------------------
 #    def Mate(self, partner):
 #        return newObj
+    #----------------------------------------------------
+    def safetycheck(self):
+        return True
 
     #----------------------------------------------------
     def setscore(self, score):
@@ -73,12 +77,17 @@ class MolObject(object):
         return self.score
    #----------------------------------------------------
     def computescore(self):
+        rx = self.coords[0][0] - self.coords[0][0]    
+        ry = self.coords[0][1] - self.coords[0][1]    
+        rz = self.coords[0][2] - self.coords[0][2]    
+        self.r = sqrt(rx*rx + ry*ry + rz*rz)
+
         score, eng = objFunc(self)
         self.score = score
         self.eng = eng
     #----------------------------------------------------
     def geteng(self):
-        return self.seng
+        return self.eng
 
     #----------------------------------------------------
     def setfeature(self, newCoords):
@@ -96,8 +105,7 @@ class MolObject(object):
 
    #----------------------------------------------------
     def findgroup(self):
-        groupID = 0
-
+        groupID = floor(self.dr*self.r)/self.dr
         return groupID
    #----------------------------------------------------
 #============================================================
@@ -105,16 +113,20 @@ def objFunc(obj):
     from lammps import PyLammps, lammps  
     sim = lammps()
     PyLmps = PyLammps(ptr=sim)
-    sim.command("region box block -1000 -1000 -1000 1000 1000 1000")
+    sim.command("region box block -10 -10 -10 10 10 10")
     sim.command("create_box 2 box")
+    sim.command("boundary p p p")
+    sim.command("pair_style lj/cut 2.5")
+    sim.command("pair_coeff * * 1.0 1.0 2.5")
     coords = obj.getfeature()
     for atom in coords:
-        sim.command("create_atoms %s single %s %s %s" % (tuple(atom))
+        sim.command("create_atoms %s single %s %s %s" % (tuple(atom)))
     sim.command("read_data %s"%( obj.getffFile() ) )
 #    sim.command("minimize 0.0 1.0e-8 1 1")
 #    sim.command("minimize 0.0 1.0e-8 1000000 10000000")
     eng = PyLmps.eval("pe")
-    val = exp(-eng/(1.987e-3*300))
+#    val = exp(-eng/(1.987e-3*300))
+    val = exp(-2*eng)
     print val, eng
 
     return val, eng

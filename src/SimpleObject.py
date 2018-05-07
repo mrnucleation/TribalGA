@@ -95,6 +95,9 @@ class RadialObj(object):
         x,y,r = copyobj.getfeature()
         self.setfeature(x=x, y=y)
 
+    #----------------------------------------------------
+    def safetycheck(self):
+        return True
    #----------------------------------------------------
     def getfeature(self):
         self.r = self.x**2 + self.y**2

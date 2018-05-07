@@ -38,11 +38,24 @@ class TribePool(object):
     #----------------------------------------------------
     def Mutate(self):
         from math import fabs
+        #Check to make sure we haven't hit the maximum number of objects yet.
         listSize = len(self.members)
         if listSize >= self.maxmem:
             return
+
+        #Choose a parent
         obj1 = randint(0,listSize-1)
+
+        #Create a mutated structure. 
         child = self.members[obj1].Mutate()
+
+        #Check to see if the child satisfies all constraints.
+        result = child.safetycheck()
+        if not result:
+            return
+
+
+        #Figure out which tribe the new member belongs to and add them to it.
         child.computescore()
         groupID = child.findgroup()
         if groupID in self.groups:
@@ -85,6 +98,12 @@ class TribePool(object):
                 obj2 += 1
 
         child = self.members[obj1].Mate(self.members[obj2])
+
+        #Check to see if the child satisfies all constraints.
+        result = child.safetycheck()
+        if not result:
+            return
+
         child.computescore()
         groupID = child.findgroup()
         if groupID in self.group:

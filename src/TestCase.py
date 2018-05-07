@@ -1,5 +1,7 @@
-from PoolClass import Pool
-from SimpleObject import RadialObj
+#from PoolClass import Pool
+from TribalPoolClass import TribePool
+#from SimpleObject import RadialObj
+from MoleculeObject import MolObject
 from random import random, seed
 from datetime import datetime
 from math import floor
@@ -9,9 +11,17 @@ def main():
 #    tribelist.append(Tribe())
     seed(datetime.now())
 
-    tribeTest = Pool()
-    for i in range(30):
-        tribeTest.AddMember(RadialObj(initial=True))
+    tribeTest = TribePool()
+
+    init = MolObject()
+    coords = [ [1, 1.0, 0.0, 0.0],
+               [1, 0.0, 0.0, 0.0] ]
+    init.setFeature(coords)
+    tribeTest.AddMember(init)
+
+#    for i in range(30):
+#        tribeTest.AddMember(RadialObj(initial=True))
+
     dummy = 0
 #    hist = []
 #    dr = 7.0/1000.0
