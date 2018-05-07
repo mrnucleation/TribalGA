@@ -87,33 +87,37 @@ class Pool(object):
         remList = []
         # Loop
         for iTries in xrange(self.famineTries):
+            #Ensure there are at least two competators remaining
             canSize = len(canidates)
             if canSize < 2:
                 break
+            #Pick two competators.
             indx1 = randint(0,canSize-1)
             indx2 = randint(0,canSize-1)
             while indx1 == indx2:
                 indx2 = randint(0,canSize-1)
             obj1 = self.members[canidates[indx1]]
             obj2 = self.members[canidates[indx2]]
+
+            #Round 1, FIGHT! (Insert Ryu music)
             loser = self.MemberFight(obj1, obj2)
             if loser == 1:
                 loser = indx1
+                remList.append(obj1)
             else:
                 loser = indx2
-            canidates.remove(loser)
-                for item in self.groups[loser]:
-                    self.members.remove(item)
-                del self.groups[loser]
-#                remList.append(loser)
-            else:
-                remMemb = self.RIP(self.groups[loser])
-                yorick = self.groups[loser][remMemb]
-                self.groups[loser].remove(yorick)
-                self.members.remove(yorick)
+                remList.append(obj2)
 
+            #Winner stays on. Loser exits the pool.
+            canidates.remove(loser)
+
+        #Kick out all the losers.
         remList = sorted(remList)
         remList.reverse()
+        for item in remList:
+            self.members.remove(item)
+            self.RemoveMember(item, logfile)
+
     #----------------------------------------------------
     def MemberFight(self, mem1, mem2, compType):
         score1 = mem1.getscore()[compType]

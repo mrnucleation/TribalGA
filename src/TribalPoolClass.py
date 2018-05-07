@@ -99,7 +99,7 @@ class TribePool(object):
         canSize = len(canidates)
         if canSize < 2:
             return
-        remList = []
+#        remList = []
         # Loop
         for iTries in xrange(self.famineTries):
             canSize = len(canidates)
@@ -132,8 +132,8 @@ class TribePool(object):
                 self.groups[loser].remove(yorick)
                 self.members.remove(yorick)
 
-        remList = sorted(remList)
-        remList.reverse()
+#        remList = sorted(remList)
+#        remList.reverse()
 #        print remList
 #        for i, item in enumerate(self.members):
 #            print i, item
