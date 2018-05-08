@@ -32,14 +32,14 @@ def main():
     print "Start Simulation"
     for i in range(int(2e9)):
         ranNum = random()
-        if ranNum < 0.00001:
+        if ranNum < 1e-6:
             tribeTest.CivilWar(dummy)
             scorelist = tribeTest.getfeatures()
 #        elif ranNum < 0.1:
 #            tribeTest.Mate()
         else:
             tribeTest.Mutate()
-        if i%100000 == 0:
+        if i%int(1e7) == 0:
             print tribeTest
         
 #    norm = 0.0

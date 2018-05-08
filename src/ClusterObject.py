@@ -116,12 +116,11 @@ class MolObject(object):
             ry = self.coords[0][2] - self.coords[1][2]    
             rz = self.coords[0][3] - self.coords[1][3]    
             self.r = sqrt(rx*rx + ry*ry + rz*rz)
-        if self.r < 2.5:
-            return 0.0
-        else:
-            return 1.0
-#        groupID = floor(self.dr*self.r)/self.dr
-#        return groupID
+        groupID = floor(self.dr*self.r)/self.dr
+#        if groupID < 4.0:
+        return groupID
+#        else:
+#            return 5.0
    #----------------------------------------------------
 #============================================================
 def objFuncLammps(obj):
@@ -160,7 +159,7 @@ def objFunc(obj):
     LJ = 1.0/rsq
     LJ = LJ*LJ*LJ
     eng = 4.0*LJ*(LJ-1.0)
-    val = exp(-(eng+1.0)/0.1)
+    val = exp(-(eng+1.0)/0.3)
 #    print eng, val
     return val, eng
 

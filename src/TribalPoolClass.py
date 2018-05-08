@@ -1,5 +1,5 @@
 from random import random, choice, randint
-
+from math import fabs
 
 class TribePool(object):
     #----------------------------------------------------
@@ -27,7 +27,7 @@ class TribePool(object):
                 total += score
             outlist.append([key, nMemb, total, best])
 
-        outlist = sorted(outlist, key=lambda x: x[1], reverse=True)
+        outlist = sorted(outlist, key=lambda x: x[2], reverse=True)
 
         for i,obj in enumerate(outlist):
             printStr = printStr + 'Tribe %s has %s members with a total score of %s.  Best memeber score: %s  \n' % (obj[0], obj[1], obj[2], obj[3])
@@ -37,7 +37,10 @@ class TribePool(object):
 
     #----------------------------------------------------
     def Mutate(self):
-        from math import fabs
+        '''
+         This function creates a new structure by performing a small modification of an existing structure.
+         
+        '''
         #Check to make sure we haven't hit the maximum number of objects yet.
         listSize = len(self.members)
         if listSize >= self.maxmem:
@@ -83,7 +86,7 @@ class TribePool(object):
 
         ranNum = random()
         sumInt = 0.0
-        obj1 = 0
+        obj1 = -1
         while sumInt < ranNum and obj1 < listSize-1:
             sumInt += problist[obj1]
             obj1 += 1
@@ -92,7 +95,7 @@ class TribePool(object):
         while obj1 == obj2:
             ranNum = random()
             sumInt = 0.0
-            obj2 = 0
+            obj2 = -1
             while sumInt < ranNum and obj2 < listSize-1:
                 sumInt += problist[obj2]
                 obj2 += 1
@@ -118,26 +121,82 @@ class TribePool(object):
         canSize = len(canidates)
         if canSize < 2:
             return
-#        remList = []
+        #Construct the Probability Table such that larger groups have a higher chance
+        #of being chosen. 
         # Loop
+        canSize = len(canidates)
+        oldCanSize = len(canidates)-1
         for iTries in xrange(self.famineTries):
             canSize = len(canidates)
+            
             if canSize < 2:
                 break
-            indx1 = randint(0,canSize-1)
-            indx2 = randint(0,canSize-1)
-            while indx1 == indx2:
-                indx2 = randint(0,canSize-1)
-            group1 = canidates[indx1]
-            group2 = canidates[indx2]
+
+            #In the event that one of the canidates were removed from competition
+            #the probability list needs to be recalculated. 
+            if oldCanSize != canSize:
+                problist = []
+                norm = 0.0
+                for groupID in canidates:
+                    total = 0.0
+                    for obj in self.groups[groupID]:
+                        total += obj.getscore()
+                    norm += total**3
+                    problist.append(total**3)
+
+                #Normalize
+                try:
+                    for indx, item in enumerate(problist):
+                        problist[indx] = problist[indx]/norm
+                except ZeroDivisionError:
+                    print "Normalization ERROR!"
+                    print problist
+                    raise ZeroDivisionError
+
+
+            ranNum = random()
+            sumInt = 0.0
+            indx1 = -1
+            listSize = len(problist)
+            while sumInt < ranNum and indx1 < listSize-1:
+                sumInt += problist[indx1]
+                indx1 += 1
+#            print problist
+#            print indx1, ranNum, sumInt
+            cnt = 0
+            while True:
+                ranNum = random()
+                sumInt = 0.0
+                indx2 = -1
+                while sumInt < ranNum and indx2 < listSize-1:
+                    sumInt += problist[indx2]
+                    indx2 += 1
+                if indx1 != indx2:
+                    break
+                cnt += 1
+                if cnt > 4:
+                    while True:
+                        indx2 = randint(0, listSize-1)
+                        if indx1 != indx2:
+                            break
+
+                    break
+            try:
+                group1 = canidates[indx1]
+                group2 = canidates[indx2]
+            except:
+                print indx1, indx2, len(canidates)
+                raise "Blah"
 #            print listSize, obj1, obj2
 #            for i,obj in enumerate(self.members):
 #                print i,obj
             loser = self.MemberFight(self.groups[group1], self.groups[group2])
             if loser == 1:
                 loser = group1
+                loserindx = indx1
             else:
                 loser = group2
+                loserindx = indx2
 
             if len(self.groups[loser]) == 1:
                 canidates.remove(loser)
@@ -150,6 +209,8 @@ class TribePool(object):
                 yorick = self.groups[loser][remMemb]
                 self.groups[loser].remove(yorick)
                 self.members.remove(yorick)
+
+            oldCanSize = canSize
 
 #        remList = sorted(remList)
 #        remList.reverse()
@@ -181,8 +242,9 @@ class TribePool(object):
             loser = 1
         return loser
     #----------------------------------------------------
-    #This function picks the group member which must be removed from the pool.
+    #This function picks the group member which must be removed from the pool after the group has lost a competition.
     def RIP(self, group):
+        #Construct probabity list
         problist = []
         norm = 0.0
         for item in group:
@@ -190,8 +252,12 @@ class TribePool(object):
             norm += score
             problist.append(score)
 
-        for indx, item in enumerate(problist):
-            problist[indx] = problist[indx]/norm
+        try:
+            for indx, item in enumerate(problist):
+                problist[indx] = problist[indx]/norm
+        except ZeroDivisionError:
+            print problist
+            raise ZeroDivisionError
 
         ranNum = random()
         sumInt = 0.0

@@ -6,13 +6,14 @@ def probFunc(r, temp):
     return r * exp(-engFunc(r)/temp)
 
 def engFunc(r):
-    return 20.0*((r-1.0)**2 * (r-5.0)**2 + 0.2*(r-1.0)**2)
+#    return 20.0*((r-1.0)**2 * (r-5.0)**2 + 0.2*(r-1.0)**2)
+    return 4.0*(1.0/r**12 - 1.0/r**6)
 
 def main():
-    nbin = 1000
-    dx = 7.0/nbin
+    nbin = 50
+    dx = 5.0/nbin
     prob = []
-    temp = 10000.5
+    temp = 0.8
     args = temp
     norm, blah = integrate.quad(probFunc, 0, 7.0, args=args)
     for i in range(nbin):
