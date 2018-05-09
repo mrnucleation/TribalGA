@@ -1,7 +1,7 @@
 from random import random, choice, randint
 
 
-class Pool(object):
+class MultiPool(object):
     #----------------------------------------------------
     def __init__(self):
         self.members = []
@@ -84,6 +84,14 @@ class Pool(object):
         if canSize < 2:
             return
         compType = randint(0, len(self.nObj))
+        topdog = -1
+        topscore = 1e50
+        for obj in canidates:
+            score = self.members[obj].getscore()
+            if score < topscore:
+                topdog = obj
+                topscore = score
+
         remList = []
         # Loop
         for iTries in xrange(self.famineTries):
@@ -100,7 +108,7 @@ class Pool(object):
             obj2 = self.members[canidates[indx2]]
 
             #Round 1, FIGHT! (Insert Ryu music)
-            loser = self.MemberFight(obj1, obj2)
+            loser = self.MemberFight(obj1, obj2, topscore, compType)
             if loser == 1:
                 loser = indx1
                 remList.append(obj1)
@@ -119,10 +127,9 @@ class Pool(object):
             self.RemoveMember(item, logfile)
 
     #----------------------------------------------------
-    def MemberFight(self, mem1, mem2, compType):
+    def MemberFight(self, mem1, mem2, topscore, compType):
         score1 = mem1.getscore()[compType]
         score2 = mem2.getscore()[compType]
-
 
         p1 = score1/(score1+score2)
         if random() < p1:
