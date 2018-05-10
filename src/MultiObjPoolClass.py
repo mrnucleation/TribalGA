@@ -1,4 +1,5 @@
 from random import random, choice, randint
+from math import fabs
 
 
 class MultiPool(object):
@@ -131,7 +132,14 @@ class MultiPool(object):
         score1 = mem1.getscore()[compType]
         score2 = mem2.getscore()[compType]
 
-        p1 = score1/(score1+score2)
+        #Not a typo. Prob1 is based on Object 2's score.
+        #It is designed so that if either side is the top-dog
+        #it automatically wins. 
+        prob1 = fabs(topscore-score2)
+        prob2 = fabs(topscore-score1)
+
+
+        p1 = prob1/(prob1+prob2)
         if random() < p1:
             loser = 2
         else:
