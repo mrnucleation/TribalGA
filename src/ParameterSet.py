@@ -92,23 +92,14 @@ class ParameterObj(object):
         return True
    #----------------------------------------------------
     def getfeature(self):
-        self.r = self.x**2 + self.y**2
-        self.r = sqrt(self.r)
-        return self.x, self.y, self.r
-   #----------------------------------------------------
-    def findgroup(self):
-        from math import floor
-#        dr = 50.0/7.0
-        groupID = floor(self.dr*self.r)/self.dr
-
-        return groupID
-
-   #----------------------------------------------------
+        return self.x
+  #----------------------------------------------------
 #============================================================
 def objFunc(obj):
     par = obj.getfeature()
-    eng = 20.0*((r-1.0)**2 * (r-5.0)**2 + 0.2*(r-1.0)**2)
-    val = obj.degen*exp(-eng/10000.5)
-    return val, eng
+    score1 = -(par[0] - par[1])
+    score2 = par[0]**2 + (par[0] - par[1])
+
+    return 
 
 
