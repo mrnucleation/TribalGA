@@ -4,22 +4,22 @@ from math import fabs
 
 class MultiPool(object):
     #----------------------------------------------------
-    def __init__(self):
+    def __init__(self, nParameters=1):
         self.members = []
-        self.maxmem = 5000
-        self.famineTries = 3
-        self.nObj = 1
+        self.maxmem = 50
+        self.famineTries = 100
+        self.nObj = nParameters
         self.tol = 0.05
     #----------------------------------------------------
     def __str__(self):
 
 #        self.members = sorted(self.members, key=lambda x: x.getscore(), reverse=True)
         printStr = "Current State of the Pool: \n"
-        outlist = []
-        outlist = sorted(outlist, key=lambda x: x[1], reverse=True)
+#        outlist = []
+        outlist = sorted(self.members, key=lambda x: x.getscore(), reverse=False)
 
         for i,obj in enumerate(outlist):
-            printStr = printStr + 'Tribe %s has %s members with a total score of %s.  Best memeber score: %s  \n' % (obj[0], obj[1], obj[2], obj[3])
+            printStr = printStr + 'Object %s, %s, has a total score of %s. \n' % (i+1,obj.getfeature(), obj.getscore())
 #            printStr = printStr + 'Object %s Score %s: %s \n' % (i, score, str(obj))
         printStr = printStr + "--------------------------------\n"
         return printStr
@@ -80,18 +80,19 @@ class MultiPool(object):
     #----------------------------------------------------
     def CivilWar(self, logfile):
         canidates = range(0,len(self.members))
+#        print canidates
         canSize = len(canidates)
         #Choose which objective will be the
         if canSize < 2:
             return
-        compType = randint(0, len(self.nObj))
+        compType = randint(0, self.nObj)-1
         topdog = -1
         topscore = 1e50
         for obj in canidates:
             score = self.members[obj].getscore()
-            if score < topscore:
+            if score[compType] < topscore:
                 topdog = obj
-                topscore = score
+                topscore = score[compType]
 
         remList = []
         # Loop
@@ -111,26 +112,30 @@ class MultiPool(object):
             #Round 1, FIGHT! (Insert Ryu music)
             loser = self.MemberFight(obj1, obj2, topscore, compType)
             if loser == 1:
-                loser = indx1
+                loser = canidates[indx1]
                 remList.append(obj1)
             else:
-                loser = indx2
+                loser = canidates[indx2]
                 remList.append(obj2)
 
             #Winner stays on. Loser exits the pool.
             canidates.remove(loser)
 
+
         #Kick out all the losers.
         remList = sorted(remList)
+#        print remList
         remList.reverse()
         for item in remList:
             self.members.remove(item)
-            self.RemoveMember(item, logfile)
+#            del self.members[item]
+#            self.RemoveMember(item, logfile)
 
     #----------------------------------------------------
     def MemberFight(self, mem1, mem2, topscore, compType):
         score1 = mem1.getscore()[compType]
         score2 = mem2.getscore()[compType]
+
 
         #Not a typo. Prob1 is based on Object 2's score.
         #It is designed so that if either side is the top-dog
@@ -138,8 +143,10 @@ class MultiPool(object):
         prob1 = fabs(topscore-score2)
         prob2 = fabs(topscore-score1)
 
-
-        p1 = prob1/(prob1+prob2)
+        if prob1==0.0 and prob2==0.0:
+            p1 = 0.5
+        else:
+            p1 = prob1/(prob1+prob2)
         if random() < p1:
             loser = 2
         else:

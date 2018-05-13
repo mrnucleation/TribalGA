@@ -3,47 +3,40 @@
 from MultiObjPoolClass import MultiPool
 #from SimpleObject import RadialObj
 #from MoleculeObject import MolObject
-from MoleculeObject import MolObject
+from ParameterSet import ParameterObj
 from random import random, seed
 from datetime import datetime
 from math import floor
 #===========================================
 def main():
-#    tribelist = []
-#    tribelist.append(Tribe())
     seed(datetime.now())
 
-    tribeTest = TribePool()
+    tribeTest = MultiPool(nParameters=2)
 
-    init = MolObject()
-    coords = [ [1, 1.0, 0.0, 0.0],
-               [1, 0.0, 0.0, 0.0] ]
+    init = ParameterObj(nParameters=2)
+    coords = [ 1.0 , 2.0]
     init.setfeature(coords)
+    init.setmax([3.0, 3.0])
+    init.setmin([0.0, 0.0])
     init.computescore()
-    print "Computed Score"
     tribeTest.AddMember(init)
 
-#    for i in range(30):
-#        tribeTest.AddMember(RadialObj(initial=True))
 
     dummy = 0
-#    hist = []
-#    dr = 7.0/1000.0
-#    for i in range(1000):
-#        hist.append(0.0)
     print "Start Simulation"
-    for i in range(int(2e9)):
+    print tribeTest
+    for i in range(int(2e8)):
         ranNum = random()
-        if ranNum < 1e-6:
+        if ranNum < 1e-4:
             tribeTest.CivilWar(dummy)
-            scorelist = tribeTest.getfeatures()
 #        elif ranNum < 0.1:
 #            tribeTest.Mate()
         else:
             tribeTest.Mutate()
         if i%int(1e7) == 0:
             print tribeTest
-        
+       
+    print tribeTest
 #    norm = 0.0
 #    for i, item in enumerate(hist):
 #        norm += item
