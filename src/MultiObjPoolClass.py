@@ -1,13 +1,13 @@
 from random import random, choice, randint
-from math import fabs
+from math import fabs, exp
 
 
 class MultiPool(object):
     #----------------------------------------------------
     def __init__(self, nParameters=1):
         self.members = []
-        self.maxmem = 50
-        self.famineTries = 100
+        self.maxmem = 20
+        self.famineTries = 2
         self.nObj = nParameters
         self.tol = 0.05
     #----------------------------------------------------
@@ -16,10 +16,10 @@ class MultiPool(object):
 #        self.members = sorted(self.members, key=lambda x: x.getscore(), reverse=True)
         printStr = "Current State of the Pool: \n"
 #        outlist = []
-        outlist = sorted(self.members, key=lambda x: x.getscore(), reverse=False)
+        outlist = sorted(self.members, key=lambda x: x.radialscore(), reverse=False)
 
         for i,obj in enumerate(outlist):
-            printStr = printStr + 'Object %s, %s, has a total score of %s. \n' % (i+1,obj.getfeature(), obj.getscore())
+            printStr = printStr + 'Object %s, %s, has a total score of %s and radial of %s. \n' % (i+1,obj.getfeature(), obj.getscore(), obj.radialscore())
 #            printStr = printStr + 'Object %s Score %s: %s \n' % (i, score, str(obj))
         printStr = printStr + "--------------------------------\n"
         return printStr
@@ -42,12 +42,28 @@ class MultiPool(object):
             return
         if listSize >= self.maxmem:
             return
+
+        compType = randint(0, self.nObj)-1
+#        topdog = -1
+        topscore = 1e50
+        for obj in self.members:
+            score = obj.getscore()
+            if score[compType] < topscore:
+#                topdog = obj
+                topscore = score[compType]
+
+
         problist = []
         norm = 0.0
         for item in self.members:
-            score = item.getscore()
-            norm += score
-            problist.append(score)
+            score = item.getscore()[compType]
+            prob = exp(-score)
+
+            norm += prob
+            problist.append(prob)
+
+        if norm == 0.0:
+            return
 
         for indx, item in enumerate(problist):
             problist[indx] = problist[indx]/norm
@@ -65,16 +81,11 @@ class MultiPool(object):
             sumInt = 0.0
             obj2 = 0
             while sumInt < ranNum and obj2 < listSize-1:
+#                print sumInt, obj2
                 sumInt += problist[obj2]
                 obj2 += 1
 
-        child = self.members[obj1].Mate(self.members[obj2])
-        child.computescore()
-        groupID = child.findgroup()
-        if groupID in self.group:
-            self.group[groupID].append(child)
-        else:
-            self.group[groupID] = [child]
+        child = self.members[obj1].Mate(self.members[obj2], compType)
         self.members.append(child)
         
     #----------------------------------------------------

@@ -1,5 +1,5 @@
 from random import random
-from math import exp, sqrt, floor
+from math import exp, sqrt, floor, fabs
 import copy
 
 class ParameterObj(object):
@@ -57,7 +57,6 @@ class ParameterObj(object):
 
         newObj = ParameterObj(nParameters=self.nPara)
         newObj.setfeature(newPar)
-
         newObj.setmax(self.pmax)
         newObj.setmin(self.pmin)
         newObj.computescore()
@@ -65,15 +64,27 @@ class ParameterObj(object):
         return newObj
 
      #----------------------------------------------------
-    def Mate(self, partner):
-        score1 = partner.getscore()
-        score2 = partner.getscore()
+    def Mate(self, partner, compType):
+        score1 = self.getscore()[compType]
+        score2 = partner.getscore()[compType]
+
+        p1 = score1/(score1+score2)
+
+        set1 = self.getfeature()
+        set2 = partner.getfeature()
+
+        newPar = []
+        for i, par in enumerate(set1):
+            pNew = p1 *set1[i] + (1.0-p1)*set2[i]
+            newPar.append(pNew)
 
         newObj = ParameterObj(nParameters=self.nPara)
-        newObj.setfeature(newParm=newParm)
+        newObj.setfeature(newPar)
         newObj.setmax(self.pmax)
         newObj.setmin(self.pmin)
         newObj.computescore()
+
+
         return newObj
 
     #----------------------------------------------------
@@ -111,6 +122,7 @@ class ParameterObj(object):
         for score in self.scores:
             r += score**2
         r = sqrt(r)
+        return r
 
 
     #----------------------------------------------------
@@ -130,9 +142,11 @@ def objFunc(obj):
     par = obj.getfeature()
 #    score1 = 3-(par[0] - par[1])
 #    score2 = 3+par[0]**2 + (par[0] - par[1])
+    scores = []
+    for item in par:
+      score = fabs(3 - par[0])
+      scores.append(score)
 
-    score1 = 3 - par[0]
-    score2 = 3 - par[1]
-    return [score1, score2]
+    return scores
 
 

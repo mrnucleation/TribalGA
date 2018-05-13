@@ -11,13 +11,16 @@ from math import floor
 def main():
     seed(datetime.now())
 
-    tribeTest = MultiPool(nParameters=2)
-
-    init = ParameterObj(nParameters=2)
-    coords = [ 1.0 , 2.0]
+    tribeTest = MultiPool(nParameters=1)
+    init = ParameterObj(nParameters=1)
+#    coords = [ 1.0 , 2.0]
+    coords = [ 1.0 ]
     init.setfeature(coords)
-    init.setmax([3.0, 3.0])
-    init.setmin([0.0, 0.0])
+#    init.setmax([5.0, 5.0])
+#    init.setmin([0.0, 0.0])
+
+    init.setmax([5.0])
+    init.setmin([0.0])
     init.computescore()
     tribeTest.AddMember(init)
 
@@ -25,12 +28,12 @@ def main():
     dummy = 0
     print "Start Simulation"
     print tribeTest
-    for i in range(int(2e8)):
+    for i in range(int(2e9)):
         ranNum = random()
         if ranNum < 1e-4:
             tribeTest.CivilWar(dummy)
-#        elif ranNum < 0.1:
-#            tribeTest.Mate()
+        elif ranNum < 0.3:
+            tribeTest.Mate()
         else:
             tribeTest.Mutate()
         if i%int(1e7) == 0:
