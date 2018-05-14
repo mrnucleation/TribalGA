@@ -4,12 +4,15 @@ import copy
 
 class ParameterObj(object):
     #----------------------------------------------------
-    def __init__(self, initial=False, nParameters=1):
+    def __init__(self, initial=False, nParameters=1, nObj=1):
+        self.ID = 0
         self.nPara = nParameters
+        self.nObj = nObj
         self.scores = []
         self.pmax = []
         self.pmin = []
         self.parameters = []
+        self.objFunc = trialObj
         for i in xrange(nParameters):
             self.pmax.append(0.0)
             self.pmin.append(0.0)
@@ -20,17 +23,19 @@ class ParameterObj(object):
     #----------------------------------------------------
     def Mutate(self):
         ranNum = random()
-        if ranNum < 0.9:
+        if ranNum < 0.3:
             newObj = self.Mutate_SmallMove()
-        else:
+        elif ranNum < 0.66:
             newObj = self.Mutate_BigMove()
+        else:
+            newObj = self.Mutate_AllMove()
         return newObj
     # ----------------------------------------------------
     def Mutate_SmallMove(self):
         nPar = len(self.parameters)
         nSel = int(floor(random()*nPar)-1)
         parRange = self.pmax[nSel] - self.pmin[nSel] 
-        parRange = 0.1*parRange
+        parRange = 0.3*parRange
         while True:
             dPar = parRange*(2.0*random()-1.0)
             if (self.parameters[nSel]+dPar <= self.pmax[nSel]) and (self.parameters[nSel]+dPar >= self.pmin[nSel]):
@@ -38,11 +43,11 @@ class ParameterObj(object):
 
         newPar = copy.deepcopy(self.parameters)
         newPar[nSel] += dPar
-        newObj = ParameterObj(nParameters=self.nPara)
+        newObj = ParameterObj(nParameters=self.nPara, nObj=self.nObj)
         newObj.setfeature(newPar)
         newObj.setmax(self.pmax)
         newObj.setmin(self.pmin)
-        newObj.computescore()
+#        newObj.computescore()
         return newObj
 
     # ----------------------------------------------------
@@ -55,13 +60,29 @@ class ParameterObj(object):
         newPar = copy.deepcopy(self.parameters)
         newPar[nSel] = dPar
 
-        newObj = ParameterObj(nParameters=self.nPara)
+        newObj = ParameterObj(nParameters=self.nPara, nObj=self.nObj)
         newObj.setfeature(newPar)
         newObj.setmax(self.pmax)
         newObj.setmin(self.pmin)
-        newObj.computescore()
+#        newObj.computescore()
 
         return newObj
+    # ----------------------------------------------------
+    def Mutate_AllMove(self):
+        newPar = []        
+        for i in range(self.nPara):
+            parRange = self.pmax[i] - self.pmin[i]
+            dPar = parRange*random() + self.pmin[i]
+            newPar.append(dPar)
+
+        newObj = ParameterObj(nParameters=self.nPara, nObj=self.nObj)
+        newObj.setfeature(newPar)
+        newObj.setmax(self.pmax)
+        newObj.setmin(self.pmin)
+#        newObj.computescore()
+
+        return newObj
+
 
      #----------------------------------------------------
     def Mate(self, partner, compType):
@@ -78,11 +99,11 @@ class ParameterObj(object):
             pNew = p1 *set1[i] + (1.0-p1)*set2[i]
             newPar.append(pNew)
 
-        newObj = ParameterObj(nParameters=self.nPara)
+        newObj = ParameterObj(nParameters=self.nPara, nObj=self.nObj)
         newObj.setfeature(newPar)
         newObj.setmax(self.pmax)
         newObj.setmin(self.pmin)
-        newObj.computescore()
+#        newObj.computescore()
 
 
         return newObj
@@ -90,6 +111,14 @@ class ParameterObj(object):
     #----------------------------------------------------
     def setscore(self, score):
         self.scores = score
+    #----------------------------------------------------
+    def setID(self, ID):
+        self.ID = ID
+    #----------------------------------------------------
+    def getID(self):
+        return self.ID 
+
+
     #----------------------------------------------------
     def setmax(self, maxvals):
         for i,val in enumerate(maxvals):
@@ -104,7 +133,7 @@ class ParameterObj(object):
         return self.scores
    #----------------------------------------------------
     def computescore(self):
-        scores = objFunc(self)
+        scores = self.objFunc(self)
         self.scores = scores
     #----------------------------------------------------
     def geteng(self):
@@ -136,16 +165,23 @@ class ParameterObj(object):
    #----------------------------------------------------
     def getfeature(self):
         return self.parameters
+   #----------------------------------------------------
+    def setobjective(self, objFunc):
+        self.objFunc = objFunc
+
   #----------------------------------------------------
 #============================================================
-def objFunc(obj):
+def trialObj(obj):
     par = obj.getfeature()
-#    score1 = 3-(par[0] - par[1])
-#    score2 = 3+par[0]**2 + (par[0] - par[1])
-    scores = []
-    for item in par:
-      score = fabs(3 - par[0])
-      scores.append(score)
+    score1 = par[0]**2
+    score2 = (par[0]-2)**2
+    rad = score1**2 + score2**2
+    rad = sqrt(rad)
+#    scores = []
+    scores = [score1, score2, rad]
+#    for item in par:
+#      score = fabs(3 - item)
+#      scores.append(score)
 
     return scores
 

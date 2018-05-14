@@ -1,15 +1,21 @@
 from random import random, choice, randint
 from math import fabs, exp
-
+from itertools import combinations
+from copy import copy
 
 class MultiPool(object):
     #----------------------------------------------------
-    def __init__(self, nParameters=1):
+    def __init__(self, nParameters=1, nObj=1):
         self.members = []
         self.maxmem = 20
-        self.famineTries = 2
-        self.nObj = nParameters
+        self.famineTries = 40
+        self.nAllowedLoses = 9
+        self.nPar = nParameters
+        self.nObj = nObj
         self.tol = 0.05
+        self.curID = 0
+        self.weights = [1.0 for x in range(nObj)]
+
     #----------------------------------------------------
     def __str__(self):
 
@@ -19,7 +25,7 @@ class MultiPool(object):
         outlist = sorted(self.members, key=lambda x: x.radialscore(), reverse=False)
 
         for i,obj in enumerate(outlist):
-            printStr = printStr + 'Object %s, %s, has a total score of %s and radial of %s. \n' % (i+1,obj.getfeature(), obj.getscore(), obj.radialscore())
+            printStr = printStr + 'Object %s, %s, has a total score of %s and radial of %s. \n' % (obj.getID(),obj.getfeature(), obj.getscore(), obj.radialscore())
 #            printStr = printStr + 'Object %s Score %s: %s \n' % (i, score, str(obj))
         printStr = printStr + "--------------------------------\n"
         return printStr
@@ -32,8 +38,14 @@ class MultiPool(object):
             return
         obj1 = randint(0,listSize-1)
         child = self.members[obj1].Mutate()
-        child.computescore()
-        self.members.append(child)
+        self.curID += 1
+        child.setID(self.curID)
+        degen = self.degencheck(child)
+        if not degen:
+            child.computescore()
+            self.members.append(child)
+
+
 
     #----------------------------------------------------
     def Mate(self):
@@ -46,6 +58,12 @@ class MultiPool(object):
         compType = randint(0, self.nObj)-1
 #        topdog = -1
         topscore = 1e50
+
+        
+
+#        outlist = sorted(self.members, key=lambda x: x.getscore()[compType], reverse=False)
+#        scorelist = sorted([x.getscore() for x in self.members])
+
         for obj in self.members:
             score = obj.getscore()
             if score[compType] < topscore:
@@ -84,9 +102,14 @@ class MultiPool(object):
 #                print sumInt, obj2
                 sumInt += problist[obj2]
                 obj2 += 1
-
+       
         child = self.members[obj1].Mate(self.members[obj2], compType)
-        self.members.append(child)
+        self.curID += 1
+        child.setID(self.curID)
+        degen = self.degencheck(child)
+        if not degen:
+            child.computescore()
+            self.members.append(child)
         
     #----------------------------------------------------
     def CivilWar(self, logfile):
@@ -96,7 +119,14 @@ class MultiPool(object):
         #Choose which objective will be the
         if canSize < 2:
             return
-        compType = randint(0, self.nObj)-1
+        ranNum = random()
+        sumInt = 0.0
+        compType = 0
+        while sumInt < ranNum and compType < self.nObj-1:
+            sumInt += self.weights[compType]
+            compType += 1
+
+#        compType = randint(0, self.nObj)-1
         topdog = -1
         topscore = 1e50
         for obj in canidates:
@@ -106,6 +136,9 @@ class MultiPool(object):
                 topscore = score[compType]
 
         remList = []
+        hitpoints = []
+        for i in range(canSize):
+            hitpoints.append(self.nAllowedLoses+0)
         # Loop
         for iTries in xrange(self.famineTries):
             #Ensure there are at least two competators remaining
@@ -124,13 +157,19 @@ class MultiPool(object):
             loser = self.MemberFight(obj1, obj2, topscore, compType)
             if loser == 1:
                 loser = canidates[indx1]
-                remList.append(obj1)
+                loserIndx = indx1
+                loserObj = obj1
             else:
                 loser = canidates[indx2]
-                remList.append(obj2)
-
-            #Winner stays on. Loser exits the pool.
-            canidates.remove(loser)
+                loserIndx = indx2
+                loserObj = obj2
+               
+            #Winner stays on. Loser takes a hit. If Loser's HP hits 0 they get kicked from pool.
+            if hitpoints[loserIndx] > 1:
+                hitpoints[loserIndx] -= 1
+            else:
+                remList.append(loserObj)
+                canidates.remove(loser)
 
 
         #Kick out all the losers.
@@ -151,8 +190,8 @@ class MultiPool(object):
         #Not a typo. Prob1 is based on Object 2's score.
         #It is designed so that if either side is the top-dog
         #it automatically wins. 
-        prob1 = fabs(topscore-score2)
-        prob2 = fabs(topscore-score1)
+        prob1 = fabs(topscore-score2)**2
+        prob2 = fabs(topscore-score1)**2
 
         if prob1==0.0 and prob2==0.0:
             p1 = 0.5
@@ -167,6 +206,21 @@ class MultiPool(object):
     def AddMember(self, obj):
         self.members.append(obj)
         obj.computescore()
+    #----------------------------------------------------
+    def degencheck(self, newobj):
+        for obj in self.members:
+            set1 = newobj.getfeature()
+            set2 = obj.getfeature()
+            delta = 0.0
+            for iPar, jPar in zip(set1,set2):
+                diff = fabs(iPar - jPar)
+                delta += diff
+            if delta < 0.05**2:
+                return True
+        else:
+            return False
+
+
 
     #----------------------------------------------------
     def getscores(self):
@@ -183,5 +237,15 @@ class MultiPool(object):
 #            print feat
             featlist.append(feat)
         return featlist
+
+    #----------------------------------------------------
+    def setweights(self, newWeights):
+        normweights = []
+        norm = 0.0
+        for weight in newWeights:
+            norm += weight
+        for weight in newWeights:
+            normweights.append(weight/norm)
+        self.weights = normweights
 
     #----------------------------------------------------
