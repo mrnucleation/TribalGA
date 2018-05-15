@@ -109,9 +109,6 @@ class ParameterObj(object):
         return newObj
 
     #----------------------------------------------------
-    def setscore(self, score):
-        self.scores = score
-    #----------------------------------------------------
     def setID(self, ID):
         self.ID = ID
     #----------------------------------------------------
@@ -131,6 +128,9 @@ class ParameterObj(object):
     #----------------------------------------------------
     def getscore(self):
         return self.scores
+    #----------------------------------------------------
+    def setscore(self, scores):
+        self.scores = scores
    #----------------------------------------------------
     def computescore(self):
         scores = self.objFunc(self)
@@ -143,8 +143,8 @@ class ParameterObj(object):
         self.parameters = newset
     #----------------------------------------------------
     def copyfeature(self, copyobj):
-        x,y,r = copyobj.getfeature()
-        self.setfeature(x=x, y=y)
+        copyfeature = copyobj.getfeature()
+        self.setfeature(copyfeature)
     #----------------------------------------------------
     def radialscore(self):
         r = 0.0
@@ -152,7 +152,6 @@ class ParameterObj(object):
             r += score**2
         r = sqrt(r)
         return r
-
 
     #----------------------------------------------------
     def safetycheck(self):
@@ -168,7 +167,6 @@ class ParameterObj(object):
    #----------------------------------------------------
     def setobjective(self, objFunc):
         self.objFunc = objFunc
-
   #----------------------------------------------------
 #============================================================
 def trialObj(obj):
