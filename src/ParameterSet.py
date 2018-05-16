@@ -130,7 +130,11 @@ class ParameterObj(object):
         return self.scores
     #----------------------------------------------------
     def setscore(self, scores):
-        self.scores = scores
+        if len(scores) == self.nObj:
+            self.scores = scores
+        else:
+            raise "Error! Score list size does not match the expected number of objectives"
+
    #----------------------------------------------------
     def computescore(self):
         scores = self.objFunc(self)
