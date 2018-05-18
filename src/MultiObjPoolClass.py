@@ -15,6 +15,7 @@ class MultiPool(object):
         self.tol = 0.05
         self.curID = 0
         self.weights = [1.0 for x in range(nObj)]
+        self.logfile = None
 
     #----------------------------------------------------
     def __str__(self):
@@ -55,26 +56,27 @@ class MultiPool(object):
         if listSize >= self.maxmem:
             return
 
-        compType = randint(0, self.nObj)-1
-#        topdog = -1
+#        compType = randint(0, self.nObj)-1
+        compType = 0
         topscore = 1e50
-
-        
+      
 
 #        outlist = sorted(self.members, key=lambda x: x.getscore()[compType], reverse=False)
 #        scorelist = sorted([x.getscore() for x in self.members])
 
         for obj in self.members:
-            score = obj.getscore()
-            if score[compType] < topscore:
+#            score = obj.getscore()
+            score = obj.radialscore()
+            if score < topscore:
 #                topdog = obj
-                topscore = score[compType]
+                topscore = score
 
 
         problist = []
         norm = 0.0
         for item in self.members:
-            score = item.getscore()[compType]
+#            score = item.getscore()[compType]
+            score = item.radialscore()
             prob = exp(-score)
 
             norm += prob
@@ -247,5 +249,7 @@ class MultiPool(object):
         for weight in newWeights:
             normweights.append(weight/norm)
         self.weights = normweights
-
+    #----------------------------------------------------
+    def setlogfile(self, logfile):
+        self.logfile = logfile
     #----------------------------------------------------

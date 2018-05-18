@@ -86,8 +86,10 @@ class ParameterObj(object):
 
      #----------------------------------------------------
     def Mate(self, partner, compType):
-        score1 = self.getscore()[compType]
-        score2 = partner.getscore()[compType]
+#        score1 = self.getscore()[compType]
+#        score2 = partner.getscore()[compType]
+        score1 = self.radialscore()
+        score2 = partner.radialscore()
 
         p1 = score1/(score1+score2)
 

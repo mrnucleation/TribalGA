@@ -12,7 +12,7 @@ def main():
     seed(datetime.now())
 
     tribeTest = MultiPool(nParameters=1, nObj=3)
-    tribeTest.setweights([1000.0, 1.0, 1000.0])
+    tribeTest.setweights([1.0, 1.0, 100.0])
     init = ParameterObj(nParameters=1, nObj=3)
 #    coords = [ 1.0 , 2.0]
     coords = [ 0.0 ]
@@ -29,7 +29,7 @@ def main():
     dummy = 0
     print "Start Simulation"
     print tribeTest
-    for i in range(int(2e9)):
+    for i in range(int(2e5)):
         ranNum = random()
         if ranNum < 0.01:
             tribeTest.CivilWar(dummy)
@@ -37,7 +37,7 @@ def main():
             tribeTest.Mate()
         else:
             tribeTest.Mutate()
-        if i%int(1e7) == 0:
+        if i%int(1e3) == 0:
             print tribeTest
        
     print tribeTest
