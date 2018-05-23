@@ -2,6 +2,9 @@ from random import random
 from math import exp, sqrt, floor, fabs
 import copy
 
+class ObjectiveMismatch(Exception):
+    pass
+
 class ParameterObj(object):
     #----------------------------------------------------
     def __init__(self, initial=False, nParameters=1, nObj=1):
@@ -12,7 +15,7 @@ class ParameterObj(object):
         self.pmax = []
         self.pmin = []
         self.parameters = []
-        self.objFunc = trialObj
+#        self.objFunc = None
         for i in xrange(nParameters):
             self.pmax.append(0.0)
             self.pmin.append(0.0)
@@ -47,6 +50,7 @@ class ParameterObj(object):
         newObj.setfeature(newPar)
         newObj.setmax(self.pmax)
         newObj.setmin(self.pmin)
+        newObj.setobjective(self.objFunc)
 #        newObj.computescore()
         return newObj
 
@@ -64,6 +68,7 @@ class ParameterObj(object):
         newObj.setfeature(newPar)
         newObj.setmax(self.pmax)
         newObj.setmin(self.pmin)
+        newObj.setobjective(self.objFunc)
 #        newObj.computescore()
 
         return newObj
@@ -79,6 +84,7 @@ class ParameterObj(object):
         newObj.setfeature(newPar)
         newObj.setmax(self.pmax)
         newObj.setmin(self.pmin)
+        newObj.setobjective(self.objFunc)
 #        newObj.computescore()
 
         return newObj
@@ -105,6 +111,7 @@ class ParameterObj(object):
         newObj.setfeature(newPar)
         newObj.setmax(self.pmax)
         newObj.setmin(self.pmin)
+        newObj.setobjective(self.objFunc)
 #        newObj.computescore()
 
 
@@ -140,6 +147,9 @@ class ParameterObj(object):
    #----------------------------------------------------
     def computescore(self):
         scores = self.objFunc(self)
+        if len(scores) != self.nObj:
+            print(scores)
+            raise ObjectiveMismatch
         self.scores = scores
     #----------------------------------------------------
     def geteng(self):
@@ -171,8 +181,9 @@ class ParameterObj(object):
     def getfeature(self):
         return self.parameters
    #----------------------------------------------------
-    def setobjective(self, objFunc):
-        self.objFunc = objFunc
+    def setobjective(self, objFunction):
+        print(objFunction)
+        self.objFunc = objFunction
   #----------------------------------------------------
 #============================================================
 def trialObj(obj):

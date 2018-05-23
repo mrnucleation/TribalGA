@@ -45,9 +45,11 @@ class RandomQuote(object):
                    36: "fell from grace.",
                    37: "probably shouldn't have done that.",
                    38: "went full 'LEEROY!!!! JENKINS!!!!'",
-                   39: "got fired from his job."
+                   39: "got fired from his job.",
+                   40: "did it again",
+                   41: "played copyrighted music in his video"
                    }
-        self.nKeys = 39
+        self.nKeys = 41
 
 
 
