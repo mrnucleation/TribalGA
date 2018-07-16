@@ -1,9 +1,10 @@
-from random import random
-from math import exp, sqrt, floor, fabs
+from random import random, gauss
+from math import exp, sqrt, floor, fabs, log
+from MultiObjPoolClass import ObjectiveMismatch
 import copy
 
-class ObjectiveMismatch(Exception):
-    pass
+#class ObjectiveMismatch(Exception):
+#    pass
 
 class ParameterObj(object):
     #----------------------------------------------------
@@ -15,32 +16,39 @@ class ParameterObj(object):
         self.pmax = []
         self.pmin = []
         self.parameters = []
-#        self.objFunc = None
+        self.objFunc = trialObj
+        self.safetyFunc = []
         for i in xrange(nParameters):
             self.pmax.append(0.0)
             self.pmin.append(0.0)
     
     #----------------------------------------------------
     def __str__(self):
-        return ' '.join(self.parameters)
+        return ' '.join([str(x) for x in self.parameters])
     #----------------------------------------------------
     def Mutate(self):
         ranNum = random()
-        if ranNum < 0.3:
+        if ranNum < 0.1:
             newObj = self.Mutate_SmallMove()
-        elif ranNum < 0.66:
+        if ranNum < 0.2:
+            newObj = self.Mutate_SmallAllMove()
+        if ranNum < 0.40:
             newObj = self.Mutate_BigMove()
         else:
             newObj = self.Mutate_AllMove()
+        newObj.setmax(self.pmax)
+        newObj.setmin(self.pmin)
+        newObj.setobjective(self.objFunc)
         return newObj
     # ----------------------------------------------------
     def Mutate_SmallMove(self):
         nPar = len(self.parameters)
         nSel = int(floor(random()*nPar)-1)
         parRange = self.pmax[nSel] - self.pmin[nSel] 
-        parRange = 0.3*parRange
+        sigma = parRange/4.0
         while True:
-            dPar = parRange*(2.0*random()-1.0)
+#            dPar = parRange*(2.0*random()-1.0)
+            dPar = gauss(0.0, sigma)
             if (self.parameters[nSel]+dPar <= self.pmax[nSel]) and (self.parameters[nSel]+dPar >= self.pmin[nSel]):
                 break
 
@@ -48,10 +56,47 @@ class ParameterObj(object):
         newPar[nSel] += dPar
         newObj = ParameterObj(nParameters=self.nPara, nObj=self.nObj)
         newObj.setfeature(newPar)
-        newObj.setmax(self.pmax)
-        newObj.setmin(self.pmin)
-        newObj.setobjective(self.objFunc)
 #        newObj.computescore()
+        return newObj
+    # ----------------------------------------------------
+    def Mutate_SmallAllMove(self):
+        newPar = copy.deepcopy(self.parameters)
+        for i in range(self.nPara):
+            parRange = self.pmax[i] - self.pmin[i]
+#            parRange = 0.05*parRange
+            sigma = parRange/4.0
+            while True:
+                dPar = gauss(0.0, sigma)
+#                dPar = parRange*(2.0*random()-1.0)
+                if (self.parameters[i]+dPar <= self.pmax[i]) and (self.parameters[i]+dPar >= self.pmin[i]):
+                    break
+            newPar[i] += dPar
+
+
+        newObj = ParameterObj(nParameters=self.nPara, nObj=self.nObj)
+        newObj.setfeature(newPar)
+#        newObj.setmax(self.pmax)
+#        newObj.setmin(self.pmin)
+#        newObj.setobjective(self.objFunc)
+#        newObj.computescore()
+        return newObj
+
+     # ----------------------------------------------------
+    def Mutate_LogMove(self):
+        nPar = len(self.parameters)
+        nSel = int(floor(random()*nPar)-1)
+        parRange = self.pmax[nSel] - self.pmin[nSel] 
+        accept = False
+
+        while not accept:
+            dPar = parRange*random() + self.pmin[nSel]
+#            if
+
+        newPar = copy.deepcopy(self.parameters)
+        newPar[nSel] = dPar
+
+        newObj = ParameterObj(nParameters=self.nPara, nObj=self.nObj)
+        newObj.setfeature(newPar)
         return newObj
 
     # ----------------------------------------------------
@@ -66,27 +111,21 @@ class ParameterObj(object):
 
         newObj = ParameterObj(nParameters=self.nPara, nObj=self.nObj)
         newObj.setfeature(newPar)
-        newObj.setmax(self.pmax)
-        newObj.setmin(self.pmin)
-        newObj.setobjective(self.objFunc)
-#        newObj.computescore()
-
         return newObj
     # ----------------------------------------------------
     def Mutate_AllMove(self):
-        newPar = []        
+        newPar = [] 
+        print("ALLMOVE")
         for i in range(self.nPara):
             parRange = self.pmax[i] - self.pmin[i]
             dPar = parRange*random() + self.pmin[i]
             newPar.append(dPar)
+        
+        print(self.parameters)
+        print(newPar)
 
         newObj = ParameterObj(nParameters=self.nPara, nObj=self.nObj)
         newObj.setfeature(newPar)
-        newObj.setmax(self.pmax)
-        newObj.setmin(self.pmin)
-        newObj.setobjective(self.objFunc)
-#        newObj.computescore()
-
         return newObj
 
 
@@ -146,11 +185,20 @@ class ParameterObj(object):
 
    #----------------------------------------------------
     def computescore(self):
-        scores = self.objFunc(self)
-        if len(scores) != self.nObj:
-            print(scores)
+        try:
+            scores = self.objFunc(self)
+            self.scores = scores
+            if len(scores) != self.nObj:
+                print(scores)
+                raise ObjectiveMismatch("An unexpected number of objectives have been returned by the objective calculator.")
+
+        except ObjectiveMismatch:
+            print("MISMATCH!")
+            print("Expcted:", self.nObj)
+            print("Got:", len(scores))
+            print("Results:", scores )
             raise ObjectiveMismatch
-        self.scores = scores
+        return True
     #----------------------------------------------------
     def geteng(self):
         return self.scores
@@ -182,8 +230,15 @@ class ParameterObj(object):
         return self.parameters
    #----------------------------------------------------
     def setobjective(self, objFunction):
-        print(objFunction)
+#        print(objFunction)
         self.objFunc = objFunction
+   #----------------------------------------------------
+    def addsafety(self, safety):
+        self.safetyFunc.append(safety)
+   #----------------------------------------------------
+    def setsafety(self, safelist):
+        self.safetyFunc = safelist
+
   #----------------------------------------------------
 #============================================================
 def trialObj(obj):

@@ -1,19 +1,22 @@
 from random import random, choice, randint
-from math import fabs, exp
+from math import fabs, exp, sqrt
 from itertools import combinations
 from copy import copy
+
+class ObjectiveMismatch(Exception):
+    pass
 
 class MultiPool(object):
     #----------------------------------------------------
     def __init__(self, nParameters=1, nObj=1):
         self.members = []
-        self.maxmem = 20
-        self.famineTries = 40
-        self.nAllowedLoses = 9
+        self.maxmem = 75
+        self.famineTries = 20
+        self.nAllowedLoses = 5
         self.nPar = nParameters
         self.nObj = nObj
         self.tol = 0.05
-        self.curID = 0
+        self.curID = 1
         self.weights = [1.0 for x in range(nObj)]
         self.logfile = None
 
@@ -26,7 +29,8 @@ class MultiPool(object):
         outlist = sorted(self.members, key=lambda x: x.radialscore(), reverse=False)
 
         for i,obj in enumerate(outlist):
-            printStr = printStr + 'Object %s, %s, has a total score of %s and radial of %s. \n' % (obj.getID(),obj.getfeature(), obj.getscore(), obj.radialscore())
+#            printStr = printStr + 'Object %s, has a total score of %s and radial of %s. \n' % (obj.getID(), obj.getscore(), obj.radialscore())
+            printStr = printStr + 'Object %s, has a radial of %s. \n' % (obj.getID(), obj.radialscore())
 #            printStr = printStr + 'Object %s Score %s: %s \n' % (i, score, str(obj))
         printStr = printStr + "--------------------------------\n"
         return printStr
@@ -37,14 +41,58 @@ class MultiPool(object):
         listSize = len(self.members)
         if listSize >= self.maxmem:
             return
-        obj1 = randint(0,listSize-1)
+        #Randomly select an object.  Probaiblity is based on the radial score.
+        topscore = 1e50
+        for obj in self.members:
+#            score = obj.getscore()
+            score = obj.radialscore()
+            if score < topscore:
+#                topdog = obj
+                topscore = score
+
+
+        problist = []
+        norm = 0.0
+        for item in self.members:
+#            score = item.getscore()[compType]
+            score = item.radialscore()
+#            prob = exp(-(score-topscore))
+            if topscore-score > 1e7:
+                prob = 0.0
+            else:
+#                prob = exp((topscore-score))
+                prob = 1.0/score**(1.0/3.0)
+
+            norm += prob
+            problist.append(prob)
+
+        if norm == 0.0:
+            print("Norm problem")
+            return
+
+        for indx, item in enumerate(problist):
+            problist[indx] = problist[indx]/norm
+
+        ranNum = random()
+        sumInt = 0.0
+        obj1 = 0
+        while sumInt < ranNum and obj1 < listSize-1:
+            sumInt += problist[obj1]
+            obj1 += 1
+#        print obj1
+#        print(problist)
+#        obj1 = randint(0,listSize-1)
         child = self.members[obj1].Mutate()
         self.curID += 1
         child.setID(self.curID)
         degen = self.degencheck(child)
         if not degen:
-            child.computescore()
-            self.members.append(child)
+            success = child.computescore()
+            if success:
+                print("Adding object %s to the pool"%(self.curID))
+                self.members.append(child)
+        else:
+            print("Object %s too similar to existing object."%(self.curID))
 
 
 
@@ -61,8 +109,6 @@ class MultiPool(object):
         topscore = 1e50
       
 
-#        outlist = sorted(self.members, key=lambda x: x.getscore()[compType], reverse=False)
-#        scorelist = sorted([x.getscore() for x in self.members])
 
         for obj in self.members:
 #            score = obj.getscore()
@@ -77,7 +123,12 @@ class MultiPool(object):
         for item in self.members:
 #            score = item.getscore()[compType]
             score = item.radialscore()
-            prob = exp(-score)
+            if topscore-score > 1e7:
+                prob = 0.0
+            else:
+#                prob = exp((topscore-score))
+                prob = 1.0/sqrt(score)
+
 
             norm += prob
             problist.append(prob)
@@ -95,23 +146,36 @@ class MultiPool(object):
             sumInt += problist[obj1]
             obj1 += 1
         
+        cnt = 0
         obj2 = obj1
         while obj1 == obj2:
-            ranNum = random()
-            sumInt = 0.0
-            obj2 = 0
-            while sumInt < ranNum and obj2 < listSize-1:
+            obj2 = randint(0,listSize-1)
+#            ranNum = random()
+#            sumInt = 0.0
+#            obj2 = 0
+#            while sumInt < ranNum and obj2 < listSize-1:
 #                print sumInt, obj2
-                sumInt += problist[obj2]
-                obj2 += 1
-       
+#                sumInt += problist[obj2]
+#                obj2 += 1
+
+            cnt += 1
+            if cnt > 1000:
+                return
+        ID1 = self.members[obj1].getID()
+        ID2 = self.members[obj2].getID()
+        print("Crossing Object %s with Object %s" % (ID1, ID2))
         child = self.members[obj1].Mate(self.members[obj2], compType)
         self.curID += 1
         child.setID(self.curID)
         degen = self.degencheck(child)
         if not degen:
-            child.computescore()
-            self.members.append(child)
+
+            success = child.computescore()
+            if success:
+                print("Adding object %s to the pool"%(self.curID))
+                self.members.append(child)
+        else:
+            print("Object %s too similar to existing object."%(self.curID))
         
     #----------------------------------------------------
     def CivilWar(self, logfile):
@@ -131,11 +195,15 @@ class MultiPool(object):
 #        compType = randint(0, self.nObj)-1
         topdog = -1
         topscore = 1e50
-        for obj in canidates:
-            score = self.members[obj].getscore()
-            if score[compType] < topscore:
-                topdog = obj
-                topscore = score[compType]
+        try:
+            for obj in canidates:
+                score = self.members[obj].getscore()
+                if score[compType] < topscore:
+                    topdog = obj
+                    topscore = score[compType]
+        except IndexError:
+            print(compType)
+            raise IndexError
 
         remList = []
         hitpoints = []
@@ -179,6 +247,7 @@ class MultiPool(object):
 #        print remList
         remList.reverse()
         for item in remList:
+
             self.members.remove(item)
 #            del self.members[item]
 #            self.RemoveMember(item, logfile)
@@ -207,22 +276,28 @@ class MultiPool(object):
     #----------------------------------------------------
     def AddMember(self, obj):
         self.members.append(obj)
-        obj.computescore()
+#        obj.computescore()
     #----------------------------------------------------
     def degencheck(self, newobj):
+        if len(self.members) < 2:
+            return False
         for obj in self.members:
             set1 = newobj.getfeature()
             set2 = obj.getfeature()
-            delta = 0.0
+            delta = 1e7
+            nPar = 0
             for iPar, jPar in zip(set1,set2):
-                diff = fabs(iPar - jPar)
-                delta += diff
-            if delta < 0.05**2:
+                diff = fabs(iPar - jPar)/jPar
+                delta = max(delta, diff)
+#                nPar += 1.0
+#            delta = delta/nPar
+            if delta < 0.05:
                 return True
         else:
             return False
-
-
+    #----------------------------------------------------
+    def getnummembers(self):
+        return self.members
 
     #----------------------------------------------------
     def getscores(self):
@@ -242,6 +317,8 @@ class MultiPool(object):
 
     #----------------------------------------------------
     def setweights(self, newWeights):
+        if len(newWeights) != self.nObj:
+            raise ObjectiveMismatch("Number of weights passed does not match the number of objectives")
         normweights = []
         norm = 0.0
         for weight in newWeights:
