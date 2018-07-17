@@ -1,7 +1,12 @@
 from random import random
-from math import exp, sqrt, floor
+from math import exp, sqrt, floor, acos, atan2, pi, fabs
+from scipy.special import sph_harm
+from itertools import combinations
+import copy
 #from lammps import lammps
 
+qNVal = 6
+qconst = 4.0*pi/(2.0*qNVal+1.0)
 class MolObject(object):
     #----------------------------------------------------
     def __init__(self, initial=False):
@@ -10,7 +15,7 @@ class MolObject(object):
         self.groupID = 0
         self.ffFile = ""
         self.coords = []
-        self.dr = 200.0/20.0
+        self.dq = 100.0/1.0
         self.r = 0.0
     
     #----------------------------------------------------
@@ -23,7 +28,7 @@ class MolObject(object):
     #----------------------------------------------------
     def Mutate(self):
         ranNum = random()
-        if ranNum < 0.1:
+        if ranNum < 0.5:
             newObj = self.Mutate_SingleMove()
         else:
             newObj = self.Mutate_AllMove()
@@ -31,12 +36,12 @@ class MolObject(object):
 
     # ----------------------------------------------------
     def Mutate_SingleMove(self):
-        import copy
+#        import copy
         nPart = len(self.coords)
         nSel = int(floor(random()*nPart))
-        dx = 2.5*(2.0*random()-1.0)
-        dy = 2.5*(2.0*random()-1.0)
-        dz = 2.5*(2.0*random()-1.0)
+        dx = 0.5*(2.0*random()-1.0)
+        dy = 0.5*(2.0*random()-1.0)
+        dz = 0.5*(2.0*random()-1.0)
         newCoords = copy.deepcopy(self.coords)
         newCoords[nSel][1] += dx
         newCoords[nSel][2] += dy
@@ -49,12 +54,12 @@ class MolObject(object):
     # ----------------------------------------------------
     def Mutate_AllMove(self):
         from math import floor
-        import copy
+#        import copy
         newCoords = copy.deepcopy(self.coords)
         for i, atom in enumerate(newCoords):
-            dx = 2.5 * (2.0*random()-1.0)
-            dy = 2.5 * (2.0*random()-1.0)
-            dz = 2.5 * (2.0*random()-1.0)
+            dx = 0.5 * (2.0*random()-1.0)
+            dy = 0.5 * (2.0*random()-1.0)
+            dz = 0.5 * (2.0*random()-1.0)
             newCoords[i][1] += dx
             newCoords[i][2] += dy
             newCoords[i][3] += dz
@@ -67,11 +72,27 @@ class MolObject(object):
 #        return newObj
     #----------------------------------------------------
     def safetycheck(self):
-        if self.r < 5.0:
-            if self.score > 0.0:
-                return True
-        else:
+#        for atom in self.coords:
+#            if fabs(atom[1]) > 3.0:
+#                return False
+#            if fabs(atom[2]) > 3.0:
+#                return False
+#            if fabs(atom[3]) > 3.0:
+#                return False
+        for iObj, jObj in combinations(self.coords, 2):
+            rx = iObj[1] - jObj[1]
+            ry = iObj[2] - jObj[2]
+            rz = iObj[3] - jObj[3]
+            rsq = rx*rx + ry*ry + rz*rz
+            if rsq < 1.0:
+                return False
+
+        cluster = clustercriteria(self)
+        if not cluster:
             return False
+
+
+        return True
 
     #----------------------------------------------------
     def setscore(self, score):
@@ -81,13 +102,12 @@ class MolObject(object):
         return self.score
    #----------------------------------------------------
     def computescore(self):
-        rx = self.coords[0][1] - self.coords[1][1]    
-        ry = self.coords[0][2] - self.coords[1][2]    
-        rz = self.coords[0][3] - self.coords[1][3]    
-        self.r = sqrt(rx*rx + ry*ry + rz*rz)
+#        rx = self.coords[0][1] - self.coords[1][1]    
+#        ry = self.coords[0][2] - self.coords[1][2]    
+#        rz = self.coords[0][3] - self.coords[1][3]    
+#        r = sqrt(rx*rx + ry*ry + rz*rz)
 
         score, eng = objFunc(self)
-#        print score, eng
         self.score = score
         self.eng = eng
         return
@@ -108,19 +128,45 @@ class MolObject(object):
    #----------------------------------------------------
     def getffFile(self):
         return self.ffFile
+    #----------------------------------------------------
+#    def dumpfeature(self, outfile):
+
+
+        
 
    #----------------------------------------------------
     def findgroup(self):
-        if self.r <= 0.0:
-            rx = self.coords[0][1] - self.coords[1][1]    
-            ry = self.coords[0][2] - self.coords[1][2]    
-            rz = self.coords[0][3] - self.coords[1][3]    
-            self.r = sqrt(rx*rx + ry*ry + rz*rz)
-        groupID = floor(self.dr*self.r)/self.dr
-#        if groupID < 4.0:
+        nNei = 0
+        qsum = []
+
+
+        for m in range(0, 2*qNVal+1):
+            qsum.append(complex(0.0, 0.0))
+
+        for iObj, jObj in combinations(self.coords, 2):
+            rx = jObj[1] - iObj[1]
+            ry = jObj[2] - iObj[2]
+            rz = jObj[3] - iObj[3]
+            r = sqrt(rx*rx + ry*ry + rz*rz)
+            if r < 1.5:
+                nNei += 1
+                phi = atan2(ry,rx)
+                theta = acos(rz/r)   
+                for m in range(0,2*qNVal+1):
+                    q = sph_harm(m-qNVal, qNVal, phi, theta)
+                    qsum[m] += q
+
+        if nNei > 0:
+            qtotal = 0.0
+            for m in range(0, 2*qNVal+1):
+                qtotal += qsum[m].real**2 + qsum[m].imag**2
+            q = qtotal * qconst
+            q = sqrt(q)/float(nNei)
+        else: 
+            q = 1.2
+#        print q
+        groupID = floor(self.dq*q)/self.dq
         return groupID
-#        else:
-#            return 5.0
    #----------------------------------------------------
 #============================================================
 def objFuncLammps(obj):
@@ -140,26 +186,67 @@ def objFuncLammps(obj):
 #    sim.command("read_data %s"%( obj.getffFile() ) )
 #    sim.command("minimize 0.0 1.0e-8 1000000 10000000")
     sim.command("run 0")
-#    print "run 0"
 #    PyLmps.run(1, "pre no post no")
     eng = PyLmps.eval("pe")
 #    val = exp(-eng/(1.987e-3*300))
     val = exp(-2*eng)
-    print val, eng
 #    sim.command("quit ")
     return val, eng
 
 #============================================================
 def objFunc(obj):
     coords = obj.getfeature()
-    rx = coords[0][1] - coords[1][1]
-    ry = coords[0][2] - coords[1][2]
-    rz = coords[0][3] - coords[1][3]
-    rsq = rx*rx + ry*ry + rz*rz
-    LJ = 1.0/rsq
-    LJ = LJ*LJ*LJ
-    eng = 4.0*LJ*(LJ-1.0)
-    val = exp(-(eng+1.0)/0.3)
-#    print eng, val
+    eng = 0.0
+    for iObj, jObj in combinations(coords, 2):
+        rx = iObj[1] - jObj[1]
+        ry = iObj[2] - jObj[2]
+        rz = iObj[3] - jObj[3]
+        rsq = rx*rx + ry*ry + rz*rz
+        LJ = 1.0/rsq
+        LJ = LJ*LJ*LJ
+        eng += 4.0*LJ*(LJ-1.0)
+    val = exp(-(eng+10.0)/0.3)
     return val, eng
+#============================================================
+def clustercriteria(obj):
+    coords = obj.getfeature()
+    topolist = []
+    for item in coords:
+        topolist.append([False for x in coords])
+
+    for i, j in combinations(range(len(coords)), 2):
+        rx = coords[i][1] - coords[j][1]
+        ry = coords[i][2] - coords[j][2]
+        rz = coords[i][3] - coords[j][3]
+        rsq = rx*rx + ry*ry + rz*rz
+        if rsq < 1.5**2:
+            topolist[i][j] = True
+            topolist[j][i] = True
+#    for item in topolist:
+#        print(item)
+#    print
+    nextlist = [0] 
+    memberlist = [False for x in coords]
+    memberlist[0] = True
+    for item in coords:
+        nextlist2 = []
+        nNew = 0
+        for obj in nextlist:
+            for j, item in enumerate(coords):
+                if not memberlist[j]:
+                    if topolist[obj][j]:
+                        nextlist2.append(j)
+                        memberlist[j] = True
+                        nNew += 1
+        if nNew == 0:
+            break
+        nextlist = copy.copy(nextlist2)
+
+
+    for member in memberlist:
+        if not member:
+#            print "Member List:", memberlist
+            return False
+    return True
+
 

@@ -141,10 +141,10 @@ class MultiPool(object):
 
         ranNum = random()
         sumInt = 0.0
-        obj1 = 0
+        obj1 = -1
         while sumInt < ranNum and obj1 < listSize-1:
-            sumInt += problist[obj1]
             obj1 += 1
+            sumInt += problist[obj1]
         
         cnt = 0
         obj2 = obj1
@@ -314,7 +314,9 @@ class MultiPool(object):
 #            print feat
             featlist.append(feat)
         return featlist
-
+    #----------------------------------------------------
+    def dumpcoords(self):
+        return None
     #----------------------------------------------------
     def setweights(self, newWeights):
         if len(newWeights) != self.nObj:
