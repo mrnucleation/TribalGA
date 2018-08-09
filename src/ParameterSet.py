@@ -1,6 +1,7 @@
 from random import random, gauss
 from math import exp, sqrt, floor, fabs, log
 from MultiObjPoolClass import ObjectiveMismatch
+from scipy.optimize import minimize
 import copy
 
 #class ObjectiveMismatch(Exception):
@@ -28,12 +29,12 @@ class ParameterObj(object):
     #----------------------------------------------------
     def Mutate(self):
         ranNum = random()
-        if ranNum < 0.1:
-            newObj = self.Mutate_SmallMove()
-        if ranNum < 0.2:
+        if ranNum < 0.5:
+#            newObj = self.Mutate_SmallMove()
+#        if ranNum < 0.2:
             newObj = self.Mutate_SmallAllMove()
-        if ranNum < 0.40:
-            newObj = self.Mutate_BigMove()
+#        if ranNum < 0.60:
+#            newObj = self.Mutate_BigMove()
         else:
             newObj = self.Mutate_AllMove()
         newObj.setmax(self.pmax)
@@ -115,7 +116,7 @@ class ParameterObj(object):
     # ----------------------------------------------------
     def Mutate_AllMove(self):
         newPar = [] 
-        print("ALLMOVE")
+#        print("ALLMOVE")
         for i in range(self.nPara):
             parRange = self.pmax[i] - self.pmin[i]
             dPar = parRange*random() + self.pmin[i]
@@ -133,10 +134,11 @@ class ParameterObj(object):
     def Mate(self, partner, compType):
 #        score1 = self.getscore()[compType]
 #        score2 = partner.getscore()[compType]
-        score1 = self.radialscore()
-        score2 = partner.radialscore()
+#        score1 = self.radialscore()
+#        score2 = partner.radialscore()
 
-        p1 = score1/(score1+score2)
+#        p1 = score1/(score1+score2)
+        p1 = random()
 
         set1 = self.getfeature()
         set2 = partner.getfeature()
@@ -238,6 +240,21 @@ class ParameterObj(object):
    #----------------------------------------------------
     def setsafety(self, safelist):
         self.safetyFunc = safelist
+   #----------------------------------------------------
+    def optimize(self, logfile=None):
+        x0 = self.parameters
+        def simplify(parIn, *args):
+            newObj = ParameterObj(nParameters=self.nPara, nObj=self.nObj)
+            newObj.setfeature(parIn)
+            scores = self.objFunc(newObj)
+            return scores[-1]
+        results = minimize(simplify, x0=x0, method='Nelder-Mead' )
+#        print(results)
+#        print(results.x)
+        self.setfeature(results.x)
+        self.computescore()
+#        quit()
+
 
   #----------------------------------------------------
 #============================================================

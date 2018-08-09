@@ -10,9 +10,10 @@ class MultiPool(object):
     #----------------------------------------------------
     def __init__(self, nParameters=1, nObj=1):
         self.members = []
-        self.maxmem = 75
+        self.maxmem = 25
         self.famineTries = 20
         self.nAllowedLoses = 5
+        self.nMinimize = 2
         self.nPar = nParameters
         self.nObj = nObj
         self.tol = 0.05
@@ -24,7 +25,8 @@ class MultiPool(object):
     def __str__(self):
 
 #        self.members = sorted(self.members, key=lambda x: x.getscore(), reverse=True)
-        printStr = "Current State of the Pool: \n"
+        printStr = "--------------------------------\n"
+        printStr = printStr + "Current State of the Pool: \n"
 #        outlist = []
         outlist = sorted(self.members, key=lambda x: x.radialscore(), reverse=False)
 
@@ -36,7 +38,7 @@ class MultiPool(object):
         return printStr
 
     #----------------------------------------------------
-    def Mutate(self):
+    def Mutate(self, logfile):
         from math import fabs
         listSize = len(self.members)
         if listSize >= self.maxmem:
@@ -61,7 +63,7 @@ class MultiPool(object):
                 prob = 0.0
             else:
 #                prob = exp((topscore-score))
-                prob = 1.0/score**(1.0/3.0)
+                prob = 1.0/sqrt(score)
 
             norm += prob
             problist.append(prob)
@@ -75,13 +77,14 @@ class MultiPool(object):
 
         ranNum = random()
         sumInt = 0.0
-        obj1 = 0
-        while sumInt < ranNum and obj1 < listSize-1:
-            sumInt += problist[obj1]
+        obj1 = -1
+        while sumInt < ranNum and obj1 < listSize:
             obj1 += 1
+            sumInt += problist[obj1]
 #        print obj1
 #        print(problist)
 #        obj1 = randint(0,listSize-1)
+        logfile.write("Creating new object from %s\n"%(self.members[obj1].getID()))
         child = self.members[obj1].Mutate()
         self.curID += 1
         child.setID(self.curID)
@@ -89,40 +92,44 @@ class MultiPool(object):
         if not degen:
             success = child.computescore()
             if success:
-                print("Adding object %s to the pool"%(self.curID))
+                logfile.write("Adding object %s to the pool \n"%(self.curID))
                 self.members.append(child)
         else:
-            print("Object %s too similar to existing object."%(self.curID))
+            logfile.write("Object %s too similar to existing object. \n"%(self.curID))
 
 
 
     #----------------------------------------------------
-    def Mate(self):
+    def Mate(self, logfile):
         listSize = len(self.members)
         if listSize < 2:
             return
         if listSize >= self.maxmem:
             return
 
-#        compType = randint(0, self.nObj)-1
-        compType = 0
-        topscore = 1e50
-      
 
+#        compType = randint(0, self.nObj-1)
+        ranNum = random()
+        sumInt = 0.0
+        compType = -1
+        while sumInt < ranNum and compType < len(self.weights):
+            compType += 1
+            sumInt += self.weights[compType]
+        topscore = 1e50
 
         for obj in self.members:
-#            score = obj.getscore()
-            score = obj.radialscore()
+            score = obj.getscore()[compType]
             if score < topscore:
-#                topdog = obj
                 topscore = score
+
+        logfile.write("Selecting for trait type %s \n" %(compType))
 
 
         problist = []
         norm = 0.0
         for item in self.members:
-#            score = item.getscore()[compType]
-            score = item.radialscore()
+            score = item.getscore()[compType]
+#            score = item.radialscore()
             if topscore-score > 1e7:
                 prob = 0.0
             else:
@@ -142,14 +149,14 @@ class MultiPool(object):
         ranNum = random()
         sumInt = 0.0
         obj1 = -1
-        while sumInt < ranNum and obj1 < listSize-1:
+        while sumInt < ranNum and obj1 < listSize:
             obj1 += 1
             sumInt += problist[obj1]
         
         cnt = 0
         obj2 = obj1
         while obj1 == obj2:
-            obj2 = randint(0,listSize-1)
+            obj2 = randint(0, listSize-1)
 #            ranNum = random()
 #            sumInt = 0.0
 #            obj2 = 0
@@ -163,7 +170,8 @@ class MultiPool(object):
                 return
         ID1 = self.members[obj1].getID()
         ID2 = self.members[obj2].getID()
-        print("Crossing Object %s with Object %s" % (ID1, ID2))
+        logfile.write("Crossing Object %s with Object %s \n" % (ID1, ID2))
+#        print("Crossing Object %s with Object %s" % (ID1, ID2))
         child = self.members[obj1].Mate(self.members[obj2], compType)
         self.curID += 1
         child.setID(self.curID)
@@ -172,10 +180,10 @@ class MultiPool(object):
 
             success = child.computescore()
             if success:
-                print("Adding object %s to the pool"%(self.curID))
+                logfile.write("Adding object %s to the pool \n"%(self.curID))
                 self.members.append(child)
         else:
-            print("Object %s too similar to existing object."%(self.curID))
+            logfile.write("Object %s too similar to existing object.\n"%(self.curID))
         
     #----------------------------------------------------
     def CivilWar(self, logfile):
@@ -187,10 +195,10 @@ class MultiPool(object):
             return
         ranNum = random()
         sumInt = 0.0
-        compType = 0
-        while sumInt < ranNum and compType < self.nObj-1:
-            sumInt += self.weights[compType]
+        compType = -1
+        while sumInt < ranNum and compType < self.nObj:
             compType += 1
+            sumInt += self.weights[compType]
 
 #        compType = randint(0, self.nObj)-1
         topdog = -1
@@ -247,6 +255,7 @@ class MultiPool(object):
 #        print remList
         remList.reverse()
         for item in remList:
+            logfile.write("Removing object %s from the pool\n"%(item.getID()))
 
             self.members.remove(item)
 #            del self.members[item]
@@ -277,6 +286,7 @@ class MultiPool(object):
     def AddMember(self, obj):
         self.members.append(obj)
 #        obj.computescore()
+
     #----------------------------------------------------
     def degencheck(self, newobj):
         if len(self.members) < 2:
@@ -291,10 +301,28 @@ class MultiPool(object):
                 delta = max(delta, diff)
 #                nPar += 1.0
 #            delta = delta/nPar
-            if delta < 0.05:
+            if delta < 0.005:
                 return True
         else:
             return False
+    #----------------------------------------------------
+    def Minimize(self):
+        sortList = sorted(self.members, key=lambda x: x.radialscore(), reverse=False)
+        cnt = 0
+        for i, obj in enumerate(sortList):
+            if cnt < self.nMinimize:
+                score = obj.optimize()
+                cnt += 1
+
+        if len(sortList) < self.nMinimize*2:
+            return
+        
+        sortList = sorted(self.members, key=lambda x: x.radialscore(), reverse=True)
+        cnt = 0
+        for i, obj in enumerate(sortList):
+            if cnt < self.nMinimize:
+                score = obj.optimize()
+                cnt += 1
     #----------------------------------------------------
     def getnummembers(self):
         return self.members
@@ -307,6 +335,13 @@ class MultiPool(object):
             scorelist.append(score)
         return scorelist
     #----------------------------------------------------
+    def getbestrad(self):
+        outlist = sorted(self.members, key=lambda x: x.radialscore(), reverse=False)
+        ID = outlist[0].getID()
+        score = outlist[0].radialscore()
+        return ID, score
+
+    #----------------------------------------------------
     def getfeatures(self):
         featlist = []
         for item in self.members:
@@ -314,9 +349,7 @@ class MultiPool(object):
 #            print feat
             featlist.append(feat)
         return featlist
-    #----------------------------------------------------
-    def dumpcoords(self):
-        return None
+
     #----------------------------------------------------
     def setweights(self, newWeights):
         if len(newWeights) != self.nObj:
