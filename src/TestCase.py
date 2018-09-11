@@ -16,7 +16,7 @@ def main():
 
     init = MolObject()
     coords = [
-            [1, 0.0, 0.0, 0.0],
+            [1, 1.0, 0.0, 0.0],
             [1, 1.0, 1.0, 0.0],
             [1, 1.0, 2.0, 0.0],
             [1, 1.0, 3.0, 0.0],
@@ -30,46 +30,69 @@ def main():
             [1, 3.0, 2.0, 0.0],
             [1, 3.0, 3.0, 0.0]
             ]
+    '''
+    coords = [
+            [1, 0.0, 0.0, 0.0],
+            [1, 1.0, 0.0, 0.0],
+            [1, 2.0, 0.0, 0.0],
+            ]
+
+    '''
+#    coords = []
+#    with open("incoords.dat", "r") as infile:
+#        for line in infile:
+#            try:
+#                col = line.split()
+#                col = [int(col[0])] + [float(x) for x in col[1:]]
+#            except:
+#                continue
+#            coords.append(col)
+
+
     init.setfeature(coords)
     init.computescore()
     result = init.safetycheck()
     if not result:
+        print("Initial State not valid")
         quit()
-    print "Computed Score"
+    print("Computed Score")
     tribeTest.AddMember(init)
 #    quit()
 
-#    tribeTest.dumpfeatures()
+    tribeTest.dumpfeatures()
 #    quit()
 #    for i in range(30):
 #        tribeTest.AddMember(RadialObj(initial=True))
+
+    outfile = open("log.out", "w")
 
     dummy = 0
 #    hist = []
 #    dr = 7.0/1000.0
 #    for i in range(1000):
 #        hist.append(0.0)
-    print "Start Simulation"
-    for i in range(int(5e7)):
+    print("Start Simulation")
+    for i in range(int(5e9)):
         ranNum = random()
         if len(tribeTest.members) >= tribeTest.maxmem:
             if len(tribeTest.groups.keys()) == 1:
-                tribeTest.Famine(dummy)
+                tribeTest.Famine(logfile=outfile)
             else:
-                if random() > 0.8:
-                    tribeTest.Famine(dummy)
-                else:
-                    tribeTest.CivilWar(dummy)
+                tribeTest.CivilWar(logfile=outfile)
 
         else:
-            tribeTest.Mutate()
+            tribeTest.Mutate(logfile=outfile)
 #            if ranNum < 1e-6:
 #                tribeTest.CivilWar(dummy)
 #                scorelist = tribeTest.getfeatures()
 #            else:
 #                tribeTest.Mutate()
         if i%int(1e3) == 0:
-            print tribeTest
+            print(tribeTest)
+            if i%int(1e4) == 0:
+#                tribeTest.Minimize(logfile=outfile)
+                print("Coordinates Dummped")
+                tribeTest.dumpfeatures()
 
     tribeTest.dumpfeatures()
 

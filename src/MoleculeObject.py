@@ -145,7 +145,7 @@ def objFuncLammps(obj):
     eng = PyLmps.eval("pe")
 #    val = exp(-eng/(1.987e-3*300))
     val = exp(-2*eng)
-    print val, eng
+    print( val, eng)
 #    sim.command("quit ")
     return val, eng
 

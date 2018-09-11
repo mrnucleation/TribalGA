@@ -13,7 +13,7 @@ class MultiPool(object):
         self.maxmem = 25
         self.famineTries = 20
         self.nAllowedLoses = 5
-        self.nMinimize = 2
+        self.nMinimize = 200
         self.nPar = nParameters
         self.nObj = nObj
         self.tol = 0.05

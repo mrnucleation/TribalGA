@@ -1,14 +1,17 @@
 from random import random, choice, randint
-from math import fabs, floor
+from math import fabs, floor, sqrt
 
 class TribePool(object):
     #----------------------------------------------------
     def __init__(self):
         self.members = []
-        self.maxmem = 1000
+        self.maxmem = 10000
+        self.nMinimize = 10
         self.groups = {}
-        self.famineTries = 20
+        self.famineTries = 800
+        self.warTries = 2
         self.tol = 0.05
+        self.curID = 1
         self.filename = "Config_%s.xyz"
     #----------------------------------------------------
     def __str__(self):
@@ -16,7 +19,8 @@ class TribePool(object):
 #        self.members = sorted(self.members, key=lambda x: x.getscore(), reverse=True)
         printStr = "Current State of the Pool: \n"
         outlist = []
-        for key, item in self.groups.iteritems():
+#        for key, item in self.groups.iteritems():
+        for key, item in self.groups.items():
 
             total = 0.0
             best = -1e50
@@ -37,7 +41,7 @@ class TribePool(object):
         return printStr
 
     #----------------------------------------------------
-    def Mutate(self):
+    def Mutate(self, logfile=None):
         '''
          This function creates a new structure by performing a small modification of an existing structure.
          
@@ -52,10 +56,15 @@ class TribePool(object):
 
         #Create a mutated structure. 
         child = self.members[obj1].Mutate()
+        child.setID(self.curID)
+        self.curID += 1
 
         #Check to see if the child satisfies all constraints.
         result = child.safetycheck()
         if not result:
+            if logfile != None:
+                logfile.write("Child (%s) of object %s failed safety check. \n"%(child.getID(), self.members[obj1].getID()))
+                logfile.flush()
             return
 
 
@@ -66,10 +75,15 @@ class TribePool(object):
             self.groups[groupID].append(child)
         else:
             self.groups[groupID] = [child]
+        if logfile != None:
+            logfile.write("Adding object %s to %s. \n"%(self.members[obj1].getID(), groupID))
+            logfile.flush()
+
+
         self.members.append(child)
 
     #----------------------------------------------------
-    def Mate(self):
+    def Mate(self, logfile=None):
         listSize = len(self.members)
         if listSize < 2:
             return
@@ -102,6 +116,8 @@ class TribePool(object):
                 obj2 += 1
 
         child = self.members[obj1].Mate(self.members[obj2])
+        child.setID(self.curID)
+        self.curID += 1
 
         #Check to see if the child satisfies all constraints.
         result = child.safetycheck()
@@ -117,29 +133,30 @@ class TribePool(object):
         self.members.append(child)
         
     #----------------------------------------------------
-    def CivilWar(self, logfile):
+    def CivilWar(self, logfile=None):
         canidates = sorted(list(self.groups.keys()))
         canSize = len(canidates)
         if canSize < 2:
             return
         
-        avgSize = 0.0
-        nCount = 0.0
-        for groupID in canidates:
-            nCount += 1.0
-            avgSize += len(self.groups[groupID])
-        avgSize = avgSize/(3.0*nCount)
-        if avgSize < 1.0:
-            self.famineTries = 1
-        else:
-            self.famineTries = int(floor(avgSize))
+#        avgSize = 0.0
+#        nCount = 0.0
+#        for groupID in canidates:
+#            nCount += 1.0
+#            avgSize += len(self.groups[groupID])
+#        avgSize = avgSize/(3.0*nCount)
+#        if avgSize < 1.0:
+#            self.famineTries = 1
+#        else:
+#            self.famineTries = int(floor(avgSize))
 
 
 
 
         canSize = len(canidates)
         oldCanSize = len(canidates)-1
-        for iTries in xrange(self.famineTries):
+#        for iTries in xrange(self.warTries):
+        for iTries in range(self.warTries):
             canSize = len(canidates)
             
             if canSize < 2:
@@ -151,19 +168,20 @@ class TribePool(object):
                 problist = []
                 norm = 0.0
                 for groupID in canidates:
-                    total = 0.0
-                    for obj in self.groups[groupID]:
-                        total += obj.getscore()
-                    norm += total
-                    problist.append(total)
+#                    total = 0.0
+#                    for obj in self.groups[groupID]:
+#                        total += obj.getscore()
+                    prob = len(self.groups[groupID])
+                    norm += prob
+                    problist.append(prob)
 
                 #Normalize
                 try:
                     for indx, item in enumerate(problist):
                         problist[indx] = problist[indx]/norm
                 except ZeroDivisionError:
-                    print "Normalization ERROR!"
-                    print problist
+                    print("Normalization ERROR!")
+                    print(problist)
                     raise ZeroDivisionError
 #                print problist
 
@@ -187,17 +205,19 @@ class TribePool(object):
                 if indx == indx1:
                     problist2.append(0.0)
                     continue
-                total = 0.0
-                for obj in self.groups[groupID]:
-                    total += obj.getscore()
-                norm += total
-                problist2.append(total)
+#                total = 0.0
+#                for obj in self.groups[groupID]:
+#                    total += obj.getscore()
+#                prob = 1.0
+                prob = len(self.groups[groupID])
+                norm += prob
+                problist2.append(prob)
             try:
                 for indx, item in enumerate(problist):
                     problist2[indx] = problist2[indx]/norm
             except ZeroDivisionError:
-                print "Normalization ERROR!"
-                print problist2
+                print( "Normalization ERROR!")
+                print( problist2)
                 raise ZeroDivisionError
 
 
@@ -206,10 +226,9 @@ class TribePool(object):
                 ranNum = random()
                 sumInt = 0.0
                 indx2 = -1
-                while sumInt < ranNum and indx2 < listSize-1:
-                    sumInt += problist2[indx2]
+                while sumInt < ranNum and indx2 < listSize:
                     indx2 += 1
-                indx2 -= 1
+                    sumInt += problist2[indx2]
                 if indx1 != indx2:
                     break
                 cnt += 1
@@ -224,7 +243,7 @@ class TribePool(object):
                 group1 = canidates[indx1]
                 group2 = canidates[indx2]
             except:
-                print indx1, indx2, len(canidates)
+                print( indx1, indx2, len(canidates))
                 raise "Blah"
 #            print "Probability: %s vs %s"%(problist[, group2)
 #            print "%s vs %s"%(group1, group2)
@@ -243,7 +262,9 @@ class TribePool(object):
                 canidates.remove(loser)
                 for item in self.groups[loser]:
                     self.members.remove(item)
+#                print "Group %s eliminated"%(loser)
                 del self.groups[loser]
+
 #                remList.append(loser)
             else:
                 try:
@@ -251,6 +272,10 @@ class TribePool(object):
                 except ZeroDivisionError:
                     remMemb = 1
                 yorick = self.groups[loser][remMemb]
+                if logfile != None:
+                    logfile.write("Object %s has been removed from the pool. \n"%(yorick.getID()) )
+                    logfile.flush()
+
                 self.groups[loser].remove(yorick)
                 self.members.remove(yorick)
 
@@ -270,20 +295,20 @@ class TribePool(object):
 
 #        print "---------------------------------------"
     #----------------------------------------------------
-    def Famine(self, logfile):
+    def Famine(self, logfile=None):
         if len(self.members) < 2:
             return
 
-        avgSize = 0.0
-        nCount = 0.0
-        for groupID in self.groups.keys():
-            nCount += 1.0
-            avgSize += len(self.groups[groupID])
-        avgSize = avgSize/(3.0*nCount)
-        if avgSize < 1.0:
-            self.famineTries = 1
-        else:
-            self.famineTries = int(floor(avgSize))
+#        avgSize = 0.0
+#        nCount = 0.0
+#        for groupID in self.groups.keys():
+#            nCount += 1.0
+#            avgSize += len(self.groups[groupID])
+#        avgSize = avgSize/(3.0*nCount)
+#        if avgSize < 1.0:
+#            self.famineTries = 1
+#        else:
+#            self.famineTries = int(floor(avgSize))
 
 
         canidates = sorted(list(self.groups.keys()))
@@ -293,7 +318,7 @@ class TribePool(object):
         # Loop
         canSize = len(canidates)
         oldCanSize = len(canidates)-1
-        for iTries in xrange(self.famineTries):
+        for iTries in range(self.famineTries):
             canSize = len(canidates)
 
             #In the event that one of the canidates were removed from competition
@@ -302,19 +327,20 @@ class TribePool(object):
                 problist = []
                 norm = 0.0
                 for groupID in canidates:
-                    total = 0.0
-                    for obj in self.groups[groupID]:
-                        total += obj.getscore()
-                    norm += total**5
-                    problist.append(total**5)
+#                    total = 0.0
+#                    for obj in self.groups[groupID]:
+#                        total += obj.getscore()
+                    prob = len(self.groups[groupID])
+                    norm += prob
+                    problist.append(prob)
 
                 #Normalize
                 try:
                     for indx, item in enumerate(problist):
                         problist[indx] = problist[indx]/norm
                 except ZeroDivisionError:
-                    print "Normalization ERROR!"
-                    print problist
+                    print( "Normalization ERROR!")
+                    print( problist)
                     raise ZeroDivisionError
 
             ranNum = random()
@@ -391,6 +417,7 @@ class TribePool(object):
 
         for item in group:
             score = item.getscore()
+#            print score
             if score > topscore:
                 topscore = score
 
@@ -400,12 +427,16 @@ class TribePool(object):
             norm += topscore-score
             problist.append(topscore-score)
 
+#        print topscore
+#        print problist
         try:
             for indx, item in enumerate(problist):
                 problist[indx] = problist[indx]/norm
         except ZeroDivisionError:
-            print problist
+            print( problist)
             raise ZeroDivisionError
+#        print problist
+#        print 
             
             
 
@@ -448,15 +479,44 @@ class TribePool(object):
         return featlist
     #----------------------------------------------------
     def dumpfeatures(self):
-        for key, group in self.groups.iteritems():
+#        for key, group in self.groups.iteritems():
+        for key, group in self.groups.items():
             with open( self.filename % (str(key)), "w" ) as outfile: 
-                for item in group:
+                sortlist = sorted(group, key=lambda x: x.getscore(), reverse=True)
+                for item in sortlist:
                     score = item.getscore()
-                    outfile.write("13 \n")
-                    outfile.write("\n")
                     feature = item.getfeature()
+#                    print(feature)
+                    outfile.write("%s \n"%(len(feature)))
+                    outfile.write("%s \n"%(score))
                     for atom in feature:
-                        outlist = [str(x) for x in atom] + [str(score), "\n"]
+                        outlist = [str(x) for x in atom] + ["\n"]
                         outfile.write(' '.join(outlist))
+    #----------------------------------------------------
+    def Minimize(self, logfile=None):
+#        sortList = sorted(self.members, key=lambda x: x.radialscore(), reverse=False)
+#        cnt = 0
+#        for i, obj in enumerate(sortList):
+#            if cnt < self.nMinimize:
+#                score = obj.optimize()
+#                cnt += 1
+#        if len(sortList) < self.nMinimize*2:
+#            return
+        
+        sortList = sorted(self.members, key=lambda x: x.radialscore(), reverse=True)
+        cnt = 0
+        for i, obj in enumerate(sortList):
+            if cnt < self.nMinimize:
+                
+                groupID = obj.findgroup()
+                self.groups[groupID].remove(obj)
+                score = obj.optimize(logfile=logfile)
+                groupID = obj.findgroup()
+                if groupID in self.groups:
+                    self.groups[groupID].append(obj)
+                else:
+                    self.groups[groupID] = [obj]
+
+                cnt += 1
 
     #----------------------------------------------------
