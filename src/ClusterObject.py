@@ -18,7 +18,7 @@ class MolObject(object):
         self.ID = 0
         self.ffFile = ""
         self.coords = []
-        self.dq = 100.0/1.0
+        self.dq = 20.0/1.0
         self.r = 0.0
         self.objfunc = objFunc
     
@@ -31,12 +31,12 @@ class MolObject(object):
 
     #----------------------------------------------------
     def Mutate(self):
-#        ranNum = random()
-        newObj = self.Mutate_AllMove()
-#        if ranNum < 0.5:
-#            newObj = self.Mutate_SingleMove()
-#        else:
-#            newObj = self.Mutate_AllMove()
+        ranNum = random()
+#        newObj = self.Mutate_AllMove()
+        if ranNum < 0.7:
+            newObj = self.Mutate_SingleMove()
+        else:
+            newObj = self.Mutate_AllMove()
         return newObj
 
     # ----------------------------------------------------
@@ -44,9 +44,9 @@ class MolObject(object):
 #        import copy
         nPart = len(self.coords)
         nSel = int(floor(random()*nPart))
-        dx = 1.5*(2.0*random()-1.0)
-        dy = 1.5*(2.0*random()-1.0)
-        dz = 1.5*(2.0*random()-1.0)
+        dx = 0.1*(2.0*random()-1.0)
+        dy = 0.1*(2.0*random()-1.0)
+        dz = 0.1*(2.0*random()-1.0)
         newCoords = copy.deepcopy(self.coords)
         newCoords[nSel][1] += dx
         newCoords[nSel][2] += dy
@@ -72,13 +72,11 @@ class MolObject(object):
             loop = True
             while loop:
 #                r = (1.5-1.0)*random()+1.0
-                r = (random()*(1.5**3 - 1.0) + 1.0)**(1.0/3.0)
+                r = (random()*(1.5**3 - 0.8**3) + 0.8**3)**(1.0/3.0)
                 dx, dy, dz = unitsphere()
                 dx *= r
                 dy *= r
                 dz *= r
-#                print dx, dy, dz
-#                print i
                 if i > 1:
                     growfrom = randint(0, i-1)
                 else:
@@ -87,20 +85,24 @@ class MolObject(object):
                 newCoords[i][2] = newCoords[growfrom][2] + dy
                 newCoords[i][3] = newCoords[growfrom][3] + dz
                 if i > 1:
-                    for j, atom2 in enumerate(newCoords[0:i-2]):
+                    nNei = 0
+                    for j, atom2 in enumerate(newCoords[0:i]):
                         rx = newCoords[i][1] - newCoords[j][1]
                         ry = newCoords[i][2] - newCoords[j][2]
                         rz = newCoords[i][3] - newCoords[j][3]
                         rsq = rx*rx + ry*ry + rz*rz
-                        if rsq < 1.0:
-#                            print i,j,rsq
+                        if rsq < 0.8**2:
                             break
+                        elif rsq < 1.5*2:
+                            nNei += 1
                     else:
-                        loop = False
+                        prob = float(nNei)/float(nNei+i)
+                        if prob > random():
+                            loop = False
+
+
                 else:
                     loop = False
-#            print "Success!"
-
 
         newObj = MolObject()
         newObj.setfeature(newCoords=newCoords)
@@ -109,8 +111,93 @@ class MolObject(object):
 #            newObj.optimize()
         return newObj
      #----------------------------------------------------
-#    def Mate(self, partner):
-#        return newObj
+    def Mate(self, partner):
+        coord1 = self.getfeature()
+        coord2 = partner.getfeature()
+#        planeAngle = pi*random()
+        plane = randint(0,2)
+
+#        Compute the center of mass for cluster 1 along the chosen plane       
+        cm1 = [0.0, 0.0, 0.0]
+        cnt = 0
+        for i, atom in enumerate(coord1):
+            cm1[0] += atom[1]
+            cm1[1] += atom[2]
+            cm1[2] += atom[3]
+            cnt += 1
+        cm1 = [ x/float(cnt) for x in cm1]
+
+
+#        For the first object, determine the number of atoms that lie above the plane
+        natoms = len(coord1)
+        nHave = 0
+        for i, atom in enumerate(coord1):
+            if atom[plane+1] > cm1[plane]:
+                nHave += 1
+
+#        Compute the center of mass for cluster 2 along the chosen plane       
+        cnt = 0
+        cm2 = [0.0, 0.0, 0.0]
+        for i, atom in enumerate(coord2):
+            cm2[0] += atom[1]
+            cm2[1] += atom[2]
+            cm2[2] += atom[3]
+            cnt += 1
+        cm2 = [ x/float(cnt) for x in cm2]
+
+
+
+#        Adjust the plane until the required number of atoms fall below the plane
+        offset = 0.0
+        nNeeded = natoms - nHave
+        loop = 0
+        while True:
+            loop += 1
+            cnt = 0
+            for i, atom in enumerate(coord2):
+                if atom[plane+1] < cm2[plane]+offset:
+                    cnt += 1
+            if cnt == nNeeded:
+                break
+            elif cnt < nNeeded:
+                offset += 0.1*random()
+            elif cnt > nNeeded:
+                offset -= 0.1*random()
+#            if loop > 10000:
+#                return None
+
+        newCoords = copy.deepcopy(self.coords)
+        for i, atom in enumerate(newCoords):
+            newCoords[i][0] = 1
+
+        cIndx = 0
+        for i, atom in enumerate(coord1):
+            if atom[plane+1] > cm1[plane]:
+                newCoords[cIndx][0] = 1
+                for j, xyz in enumerate(atom[1:4]):
+                    newCoords[cIndx][j+1] = coord1[i][j+1] - cm1[j]
+                cIndx += 1
+
+        for i, atom in enumerate(coord2):
+            if atom[plane+1] < cm2[plane]+offset:
+                newCoords[cIndx][0] = 2
+                for j, xyz in enumerate(atom[1:4]):
+                    if j == plane:
+                        newCoords[cIndx][j+1] = coord2[i][j+1] - cm2[j] - offset
+                    else:
+                        newCoords[cIndx][j+1] = coord2[i][j+1] - cm2[j]
+                cIndx += 1
+
+
+
+        newObj = MolObject()
+        newObj.setfeature(newCoords=newCoords)
+#        newObj.dumpfeature()
+        newObj.computescore()
+        if random() < 0.25:
+            newObj.optimize()
+            newObj.dumpfeature()
+        return newObj
     #----------------------------------------------------
     def safetycheck(self):
 #        for atom in self.coords:
@@ -243,10 +330,11 @@ class MolObject(object):
             result = newObj.safetycheck()
             if result:
                 scores, eng = self.objfunc(newObj)
-                return -scores
+#                return -scores
+                return eng
             else:
                 return 1e30
-        results = minimize(simplify, x0=x0, method='Nelder-Mead', options={'maxiter':5000, 'adaptive':True} )
+        results = minimize(simplify, x0=x0, method='CG', options={'maxiter':2500, 'gtol':1e-1} )
         finalcoords = []
         cnt = 0
         for x,y,z in grouper(3, results.x):
@@ -305,7 +393,7 @@ def objFunc(obj):
         LJ = 1.0/rsq
         LJ = LJ*LJ*LJ
         eng += 4.0*LJ*(LJ-1.0)
-    val = exp(-eng/temperature)
+    val = exp(-(eng+17.0)/temperature)
     return val, eng
 #============================================================
 def clustercriteria(obj, topolist):
@@ -322,9 +410,6 @@ def clustercriteria(obj, topolist):
 #        if rsq < 1.5**2:
 #            topolist[i][j] = True
 #            topolist[j][i] = True
-#    for item in topolist:
-#        print(item)
-#    print
     nextlist = [0] 
     memberlist = [False for x in coords]
     memberlist[0] = True
@@ -345,15 +430,11 @@ def clustercriteria(obj, topolist):
 
     for member in memberlist:
         if not member:
-#            print "Member List:", memberlist
 #            for i, atom in enumerate(memberlist):
-#                print i, atom
 
-#            print "Neigh List:"
 #            for i, row in enumerate(topolist):
 #                for j, col in enumerate(row):
 #                    if col:
-#                        print i,j,col
 #            quit()
             return False
     return True

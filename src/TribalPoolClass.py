@@ -1,15 +1,15 @@
 from random import random, choice, randint
-from math import fabs, floor, sqrt
+from math import fabs, floor, sqrt, log
 
 class TribePool(object):
     #----------------------------------------------------
     def __init__(self):
         self.members = []
-        self.maxmem = 10000
-        self.nMinimize = 10
+        self.maxmem = 5000
+        self.nMinimize = 1
         self.groups = {}
         self.famineTries = 800
-        self.warTries = 2
+        self.warTries = 1000
         self.tol = 0.05
         self.curID = 1
         self.filename = "Config_%s.xyz"
@@ -62,6 +62,7 @@ class TribePool(object):
         #Check to see if the child satisfies all constraints.
         result = child.safetycheck()
         if not result:
+#            child.dumpfeature()
             if logfile != None:
                 logfile.write("Child (%s) of object %s failed safety check. \n"%(child.getID(), self.members[obj1].getID()))
                 logfile.flush()
@@ -76,12 +77,12 @@ class TribePool(object):
         else:
             self.groups[groupID] = [child]
         if logfile != None:
-            logfile.write("Adding object %s to %s. \n"%(self.members[obj1].getID(), groupID))
+            logfile.write("Adding object %s to %s. \n"%(child.getID(), groupID))
             logfile.flush()
 
 
         self.members.append(child)
-
+    '''
     #----------------------------------------------------
     def Mate(self, logfile=None):
         listSize = len(self.members)
@@ -131,7 +132,117 @@ class TribePool(object):
         else:
             self.group[groupID] = [child]
         self.members.append(child)
+    '''
+
+    #-----------------------------------
+    def Mate(self, logfile=None): 
+        listSize = len(self.members)
+        if listSize < 2:
+            return
+        if listSize >= self.maxmem:
+            return
+
+        topscore = 0.0
+        for obj in self.members:
+            score = obj.radialscore()
+            if score > topscore:
+                topscore = score
+
+
+        rawproblist = []
+        problist = []
+        norm = 0.0
+        for item in self.members:
+#            score = item.getscore()
+            score = item.radialscore()
+            if topscore-score < 1e-7:
+                prob = 0.0
+            else:
+                try:
+#                    prob = 1.0/sqrt(score)
+                    if score > 1.0:
+                        prob = log(score)
+                    else:
+                        prob = 0.0
+                except ZeroDivisionError:
+#                    print score
+                    prob = 0.0
+
+            norm += prob
+            rawproblist.append(prob)
+
+        if norm == 0.0:
+            return
+
+        problist = [x/norm for x in rawproblist]
+
+        ranNum = random()
+        sumInt = 0.0
+        obj1 = -1
+        while sumInt < ranNum and obj1 < listSize:
+            obj1 += 1
+            sumInt += problist[obj1]
         
+        problist = []
+        norm = 0.0
+        for i, prob in enumerate(rawproblist):
+            if i != obj1:
+                norm += prob
+
+        if norm == 0.0:
+            return
+        for i, prob in enumerate(rawproblist):
+            if i != obj1:
+                problist.append(prob/norm)
+        cnt = 0
+        obj2 = obj1
+        while obj1 == obj2:
+#            obj2 = randint(0, listSize-1)
+            ranNum = random()
+            sumInt = 0.0
+            obj2 = -1
+            while sumInt < ranNum and obj2 < listSize:
+                obj2 += 1
+                sumInt += problist[obj2]
+#            ranNum = random()
+#            sumInt = 0.0
+#            obj2 = 0
+#            while sumInt < ranNum and obj2 < listSize-1:
+#                sumInt += problist[obj2]
+#                obj2 += 1
+
+            cnt += 1
+            if cnt > 1000:
+                return
+        ID1 = self.members[obj1].getID()
+        ID2 = self.members[obj2].getID()
+        if logfile != None:
+            logfile.write("Crossing Object %s with Object %s \n" % (ID1, ID2))
+        child = self.members[obj1].Mate(self.members[obj2])
+        child.setID(self.curID)
+        self.curID += 1
+
+        #Check to see if the child satisfies all constraints.
+        result = child.safetycheck()
+        if not result:
+            if logfile != None:
+                logfile.write( "Child %s failed safety check. \n"%(child.getID()) )
+                logfile.flush()
+            return
+
+
+        #Figure out which tribe the new member belongs to and add them to it.
+        child.computescore()
+        groupID = child.findgroup()
+        if groupID in self.groups:
+            self.groups[groupID].append(child)
+        else:
+            self.groups[groupID] = [child]
+        if logfile != None:
+            logfile.write("Adding object %s to %s. \n"%(child.getID(), groupID))
+            logfile.flush()
+        self.members.append(child)
+
     #----------------------------------------------------
     def CivilWar(self, logfile=None):
         canidates = sorted(list(self.groups.keys()))
@@ -299,20 +410,19 @@ class TribePool(object):
         if len(self.members) < 2:
             return
 
-#        avgSize = 0.0
-#        nCount = 0.0
-#        for groupID in self.groups.keys():
-#            nCount += 1.0
-#            avgSize += len(self.groups[groupID])
-#        avgSize = avgSize/(3.0*nCount)
-#        if avgSize < 1.0:
-#            self.famineTries = 1
-#        else:
-#            self.famineTries = int(floor(avgSize))
-
-
         canidates = sorted(list(self.groups.keys()))
         canSize = len(canidates)
+        problist = []
+        norm = 0.0
+        for groupID in canidates:
+#                    total = 0.0
+#                    for obj in self.groups[groupID]:
+#                        total += obj.getscore()
+            prob = len(self.groups[groupID])
+            norm += prob
+            problist.append(prob)
+
+
         #Construct the Probability Table such that larger groups have a higher chance
         #of being chosen. 
         # Loop
@@ -320,6 +430,8 @@ class TribePool(object):
         oldCanSize = len(canidates)-1
         for iTries in range(self.famineTries):
             canSize = len(canidates)
+            if canSize < round(self.maxmem/2.0):
+                break
 
             #In the event that one of the canidates were removed from competition
             #the probability list needs to be recalculated. 
@@ -343,14 +455,15 @@ class TribePool(object):
                     print( problist)
                     raise ZeroDivisionError
 
+
             ranNum = random()
             sumInt = 0.0
             indx1 = -1
             listSize = len(problist)
-            while sumInt < ranNum and indx1 < listSize-1:
-                sumInt += problist[indx1]
+            while sumInt < ranNum and indx1 < listSize:
                 indx1 += 1
-            indx1 -= 1
+                sumInt += problist[indx1]
+
 #            print problist
 #            print indx1, ranNum, sumInt
             
@@ -371,6 +484,9 @@ class TribePool(object):
                 yorick = self.groups[group1][remMemb]
                 self.groups[group1].remove(yorick)
                 self.members.remove(yorick)
+                if logfile != None:
+                    logfile.write("Object %s has been removed from the pool. \n"%(yorick.getID()) )
+                    logfile.flush()
 
             oldCanSize = canSize
 
@@ -485,10 +601,11 @@ class TribePool(object):
                 sortlist = sorted(group, key=lambda x: x.getscore(), reverse=True)
                 for item in sortlist:
                     score = item.getscore()
+                    eng = item.geteng()
                     feature = item.getfeature()
 #                    print(feature)
                     outfile.write("%s \n"%(len(feature)))
-                    outfile.write("%s \n"%(score))
+                    outfile.write("%s %s \n"%(score, eng))
                     for atom in feature:
                         outlist = [str(x) for x in atom] + ["\n"]
                         outfile.write(' '.join(outlist))
