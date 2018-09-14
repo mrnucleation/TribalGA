@@ -5,11 +5,11 @@ class TribePool(object):
     #----------------------------------------------------
     def __init__(self):
         self.members = []
-        self.maxmem = 5000
+        self.maxmem = 1000
         self.nMinimize = 1
         self.groups = {}
-        self.famineTries = 800
-        self.warTries = 1000
+        self.famineTries = 500
+        self.warTries = 5
         self.tol = 0.05
         self.curID = 1
         self.filename = "Config_%s.xyz"
@@ -77,7 +77,7 @@ class TribePool(object):
         else:
             self.groups[groupID] = [child]
         if logfile != None:
-            logfile.write("Adding object %s to %s. \n"%(child.getID(), groupID))
+            logfile.write("Adding object %s to %s. (Score: %s) \n"%(child.getID(), groupID, child.getscore()))
             logfile.flush()
 
 
@@ -155,18 +155,15 @@ class TribePool(object):
         for item in self.members:
 #            score = item.getscore()
             score = item.radialscore()
-            if topscore-score < 1e-7:
-                prob = 0.0
-            else:
-                try:
-#                    prob = 1.0/sqrt(score)
-                    if score > 1.0:
-                        prob = log(score)
-                    else:
-                        prob = 0.0
-                except ZeroDivisionError:
-#                    print score
+            try:
+#               prob = 1.0/sqrt(score)
+                if score > 1.0:
+                    prob = log(score)
+                else:
                     prob = 0.0
+            except ZeroDivisionError:
+#                    print score
+                prob = 0.0
 
             norm += prob
             rawproblist.append(prob)
@@ -239,7 +236,7 @@ class TribePool(object):
         else:
             self.groups[groupID] = [child]
         if logfile != None:
-            logfile.write("Adding object %s to %s. \n"%(child.getID(), groupID))
+            logfile.write("Adding object %s to %s. (Score: %s) \n"%(child.getID(), groupID, child.getscore()))
             logfile.flush()
         self.members.append(child)
 
@@ -249,7 +246,10 @@ class TribePool(object):
         canSize = len(canidates)
         if canSize < 2:
             return
-        
+
+        if logfile != None:
+            logfile.write("Starting Civil War. \n")
+            logfile.flush()
 #        avgSize = 0.0
 #        nCount = 0.0
 #        for groupID in canidates:
@@ -279,10 +279,10 @@ class TribePool(object):
                 problist = []
                 norm = 0.0
                 for groupID in canidates:
-#                    total = 0.0
-#                    for obj in self.groups[groupID]:
-#                        total += obj.getscore()
-                    prob = len(self.groups[groupID])
+                    prob = 0.0
+                    for obj in self.groups[groupID]:
+                        prob += obj.getscore()
+#                    prob = len(self.groups[groupID])
                     norm += prob
                     problist.append(prob)
 
@@ -316,11 +316,10 @@ class TribePool(object):
                 if indx == indx1:
                     problist2.append(0.0)
                     continue
-#                total = 0.0
-#                for obj in self.groups[groupID]:
-#                    total += obj.getscore()
-#                prob = 1.0
-                prob = len(self.groups[groupID])
+                prob = 0.0
+                for obj in self.groups[groupID]:
+                    prob += obj.getscore()
+#                prob = len(self.groups[groupID])
                 norm += prob
                 problist2.append(prob)
             try:
@@ -375,6 +374,10 @@ class TribePool(object):
                     self.members.remove(item)
 #                print "Group %s eliminated"%(loser)
                 del self.groups[loser]
+                if logfile != None:
+                    logfile.write("Group %s has been wiped out.\n"%(loser))
+                    logfile.flush()
+
 
 #                remList.append(loser)
             else:
@@ -391,6 +394,9 @@ class TribePool(object):
                 self.members.remove(yorick)
 
             oldCanSize = canSize
+        if logfile != None:
+            logfile.write("Civil War Over. \n")
+            logfile.flush()
 
 #        remList = sorted(remList)
 #        remList.reverse()
@@ -430,8 +436,12 @@ class TribePool(object):
         oldCanSize = len(canidates)-1
         for iTries in range(self.famineTries):
             canSize = len(canidates)
-            if canSize < round(self.maxmem/2.0):
+            if len(self.members) < int(round(self.maxmem/2.0)):
+                if logfile != None:
+                    logfile.write("Famine has ended. \n")
+                    logfile.flush()
                 break
+
 
             #In the event that one of the canidates were removed from competition
             #the probability list needs to be recalculated. 
@@ -475,6 +485,9 @@ class TribePool(object):
                 for item in self.groups[group1]:
                     self.members.remove(item)
                 del self.groups[group1]
+                if logfile != None:
+                    logfile.write("Group %s has been wiped out.\n"%(group1))
+                    logfile.flush()
 #                remList.append(group1)
             else:
                 try:

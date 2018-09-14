@@ -86,6 +86,8 @@ def main():
                 tribeTest.Mate(logfile=outfile)
             elif ranNum < 0.15:
                 tribeTest.Famine(logfile=outfile)
+            elif ranNum < 0.20:
+                tribeTest.CivilWar(logfile=outfile)
             else:
                 tribeTest.Mutate(logfile=outfile)
 

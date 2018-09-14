@@ -18,7 +18,7 @@ class MolObject(object):
         self.ID = 0
         self.ffFile = ""
         self.coords = []
-        self.dq = 20.0/1.0
+        self.dq = 50.0/1.0
         self.r = 0.0
         self.objfunc = objFunc
     
@@ -31,12 +31,12 @@ class MolObject(object):
 
     #----------------------------------------------------
     def Mutate(self):
-        ranNum = random()
-#        newObj = self.Mutate_AllMove()
-        if ranNum < 0.7:
-            newObj = self.Mutate_SingleMove()
-        else:
-            newObj = self.Mutate_AllMove()
+#        ranNum = random()
+        newObj = self.Mutate_AllMove()
+#        if ranNum < 0.7:
+#            newObj = self.Mutate_SingleMove()
+#        else:
+#            newObj = self.Mutate_AllMove()
         return newObj
 
     # ----------------------------------------------------
@@ -107,8 +107,8 @@ class MolObject(object):
         newObj = MolObject()
         newObj.setfeature(newCoords=newCoords)
         newObj.computescore()
-#        if random() < 0.05:
-#            newObj.optimize()
+        if random() < 0.05:
+            newObj.optimize()
         return newObj
      #----------------------------------------------------
     def Mate(self, partner):
@@ -194,7 +194,7 @@ class MolObject(object):
         newObj.setfeature(newCoords=newCoords)
 #        newObj.dumpfeature()
         newObj.computescore()
-        if random() < 0.25:
+        if random() < 0.5:
             newObj.optimize()
             newObj.dumpfeature()
         return newObj
@@ -334,7 +334,7 @@ class MolObject(object):
                 return eng
             else:
                 return 1e30
-        results = minimize(simplify, x0=x0, method='CG', options={'maxiter':2500, 'gtol':1e-1} )
+        results = minimize(simplify, x0=x0, method='CG', options={'maxiter':1500, 'gtol':1e-1} )
         finalcoords = []
         cnt = 0
         for x,y,z in grouper(3, results.x):
@@ -393,7 +393,7 @@ def objFunc(obj):
         LJ = 1.0/rsq
         LJ = LJ*LJ*LJ
         eng += 4.0*LJ*(LJ-1.0)
-    val = exp(-(eng+17.0)/temperature)
+    val = exp(-(eng+20.0)/temperature)
     return val, eng
 #============================================================
 def clustercriteria(obj, topolist):
