@@ -6,8 +6,8 @@ def probFunc(r, temp):
     return r * exp(-engFunc(r)/temp)
 
 def engFunc(r):
-#    return 20.0*((r-1.0)**2 * (r-5.0)**2 + 0.2*(r-1.0)**2)
-    return 4.0*(1.0/r**12 - 1.0/r**6)
+    return 20.0*((r-1.0)**2 * (r-5.0)**2 + 0.2*(r-1.0)**2)
+#    return 4.0*(1.0/r**12 - 1.0/r**6)
 
 def main():
     nbin = 50

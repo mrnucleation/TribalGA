@@ -5,7 +5,7 @@ class TribePool(object):
     #----------------------------------------------------
     def __init__(self):
         self.members = []
-        self.maxmem = 1000
+        self.maxmem = 50000
         self.nMinimize = 1
         self.groups = {}
         self.famineTries = 500

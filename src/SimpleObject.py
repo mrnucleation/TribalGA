@@ -4,10 +4,11 @@ from math import exp, sqrt
 class RadialObj(object):
     #----------------------------------------------------
     def __init__(self, initial=False):
+        self.ID = 0
         self.x = 0.0
         self.y = 0.0
         self.r = 0.0
-        self.dr = 70.0/7.0
+        self.dr = 35.0/7.0
         self.degen = 1.0
         self.score = 0.0
         self.eng = 0.0
@@ -136,6 +137,16 @@ class RadialObj(object):
         groupID = floor(self.dr*self.r)/self.dr
 
         return groupID
+    #----------------------------------------------------
+    def setID(self, ID):
+        self.ID = ID
+    #----------------------------------------------------
+    def getID(self):
+        return self.ID 
+    #----------------------------------------------------
+    def radialscore(self):
+        return self.score
+
 
    #----------------------------------------------------
 #============================================================
@@ -144,7 +155,7 @@ def objFunc(obj):
 #    r = x*x + y*y
 #    r = sqrt(r)
     eng = 20.0*((r-1.0)**2 * (r-5.0)**2 + 0.2*(r-1.0)**2)
-    val = obj.degen*exp(-eng/10000.5)
+    val = obj.degen*exp(-eng/100.5)
     return val, eng
 
 
