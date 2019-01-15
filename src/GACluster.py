@@ -1,6 +1,7 @@
 #from PoolClass import Pool
 from TribalPoolClass import TribePool
 #from SimpleObject import RadialObj
+from MultiObjPoolClass import MultiPool
 from MoleculeObject import MolObject
 from ClusterObject import MolObject
 from random import random, seed
@@ -12,32 +13,11 @@ def main():
 #    tribelist.append(Tribe())
     seed(datetime.now())
 
-    tribeTest = TribePool()
+    tribeTest = MultiPool(nParameters=1, nObj=1)
+    tribeTest.setweights([1.0])
+
 
     init = MolObject()
-    '''
-    coords = [
-            [1, 1.0, 0.0, 6e-2],
-            [1, 1.0, 1.0, 5e-2],
-            [1, 1.0, 2.0, 4e-2],
-            [1, 1.0, 3.0, 3e-2],
-            [1, 1.0, 4.0, 2e-2],
-            [1, 2.0, 0.0, 1e-1],
-            [1, 2.0, 1.0, 1e-11],
-            [1, 2.0, 2.0, 1e-10],
-            [1, 2.0, 3.0, 1e-9],
-            [1, 3.0, 0.0, 1e-7],
-            [1, 3.0, 1.0, 1e-6],
-            [1, 3.0, 2.0, 1e-5],
-            [1, 3.0, 3.0, 1e-3]
-            ]
-    coords = [
-            [1, 0.0, 0.0, 0.0],
-            [1, 1.0, 0.0, 0.0],
-            [1, 2.0, 0.0, 0.0],
-            ]
-
-    '''
     coords = []
     with open("incoords.dat", "r") as infile:
         for line in infile:

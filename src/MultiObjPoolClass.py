@@ -10,7 +10,7 @@ class MultiPool(object):
     #----------------------------------------------------
     def __init__(self, nParameters=1, nObj=1):
         self.members = []
-        self.maxmem = 25
+        self.maxmem = 50
         self.famineTries = 20
         self.nAllowedLoses = 5
         self.nMinimize = 200
@@ -20,6 +20,7 @@ class MultiPool(object):
         self.curID = 1
         self.weights = [1.0 for x in range(nObj)]
         self.logfile = None
+        self.filename = 'temp%s.dat'
 
     #----------------------------------------------------
     def __str__(self):
@@ -91,6 +92,7 @@ class MultiPool(object):
         degen = self.degencheck(child)
         if not degen:
             success = child.computescore()
+
             if success:
                 logfile.write("Adding object %s to the pool \n"%(self.curID))
                 self.members.append(child)
@@ -291,6 +293,7 @@ class MultiPool(object):
     def degencheck(self, newobj):
         if len(self.members) < 2:
             return False
+        return False
         for obj in self.members:
             set1 = newobj.getfeature()
             set2 = obj.getfeature()
@@ -364,4 +367,67 @@ class MultiPool(object):
     #----------------------------------------------------
     def setlogfile(self, logfile):
         self.logfile = logfile
+    #----------------------------------------------------
+    def getcurID(self):
+        return self.curID
+
+    #----------------------------------------------------
+    def dumpfeatures(self):
+        with open( "dumpfile.dat", "a" ) as outfile: 
+            for member in self.members:
+                score = member.getscore()
+                eng = member.geteng()
+                feature = member.getfeature()
+                outfile.write("Object %s: \n"%(member.getID()))
+                outfile.write("%s \n"%(feature))
+                outfile.write("%s %s \n"%(score, eng))
+                outfile.write("\n")
+    #----------------------------------------------------
+    def dumpranks(self, loopnum, limit):
+        outlist = []
+#        for key, item in self.groups.iteritems():
+        for key, item in self.groups.items():
+            total = 0.0
+            for member in item:
+                score = member.getscore()
+                total += score
+            outlist.append([key, total])
+        sortlist = sorted(outlist, key=lambda x: x[1], reverse=True)
+
+        for i, key in enumerate(sortlist[:limit]):
+            with open( "rank%s.dat" % (str(key[0])), "a" ) as outfile: 
+                outfile.write("%s %s\n"%(loopnum*1e-4,i+1))
+
+        for i, key in enumerate(sortlist):
+            with open( "score%s.dat" % (str(key[0])), "a" ) as outfile: 
+                outfile.write("%s %s\n"%(loopnum*1e-4,key[1]))
+
+    #----------------------------------------------------
+    def Minimize(self, logfile=None):
+#        sortList = sorted(self.members, key=lambda x: x.radialscore(), reverse=False)
+#        cnt = 0
+#        for i, obj in enumerate(sortList):
+#            if cnt < self.nMinimize:
+#                score = obj.optimize()
+#                cnt += 1
+#        if len(sortList) < self.nMinimize*2:
+#            return
+        
+        sortList = sorted(self.members, key=lambda x: x.radialscore(), reverse=True)
+        cnt = 0
+        for i, obj in enumerate(sortList):
+            if cnt < self.nMinimize:
+                
+                groupID = obj.findgroup()
+                self.groups[groupID].remove(obj)
+                score = obj.optimize(logfile=logfile)
+                groupID = obj.findgroup()
+                if groupID in self.groups:
+                    self.groups[groupID].append(obj)
+                else:
+                    self.groups[groupID] = [obj]
+
+                cnt += 1
+
+
     #----------------------------------------------------

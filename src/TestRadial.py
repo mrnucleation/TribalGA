@@ -46,16 +46,17 @@ def main():
                 tribeTest.Mate(logfile=outfile)
             elif ranNum < 0.11:
                 tribeTest.Famine(logfile=outfile)
-            elif ranNum < 0.12:
+            elif ranNum < 0.105:
                 tribeTest.CivilWar(logfile=outfile)
             else:
                 tribeTest.Mutate(logfile=outfile)
 
         if i%int(1e3) == 0:
             print(tribeTest)
-            if i%int(1e4) == 0:
+        if i%int(1e1) == 0:
+            tribeTest.dumpranks(i,5)
 #                tribeTest.Minimize(logfile=outfile)
-                print("Coordinates Dummped")
+#                print("Coordinates Dummped")
 #                tribeTest.dumpfeatures()
 
 #    tribeTest.dumpfeatures()

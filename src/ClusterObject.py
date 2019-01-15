@@ -1,14 +1,25 @@
 from random import random, randint
-from math import exp, sqrt, floor, acos, atan2, pi, fabs
+from math import exp, sqrt, floor, acos, atan2, pi, fabs, log
 from scipy.special import sph_harm
 from scipy.optimize import minimize
 from itertools import combinations
 import copy
 #from lammps import lammps
 
-temperature = 0.8
+temperature = 0.05
+#temperature = 0.2
+#temperature = 0.4
+#temperature = 0.8
+#temperature = 2.0
 qNVal = 6
 qconst = 4.0*pi/(2.0*qNVal+1.0)
+rMin = 1.01
+#eMin = -log(1e-2)*temperature
+#print eMin
+#rMin = (2.0/(1+sqrt(1-eMin)))**(1.0/6.0)
+#rMin = (2.0/(1+sqrt(1-eMin)))**(1.0/6.0)
+#print rMin
+rMinSq = rMin**2
 class MolObject(object):
     #----------------------------------------------------
     def __init__(self, initial=False):
@@ -91,7 +102,7 @@ class MolObject(object):
                         ry = newCoords[i][2] - newCoords[j][2]
                         rz = newCoords[i][3] - newCoords[j][3]
                         rsq = rx*rx + ry*ry + rz*rz
-                        if rsq < 0.8**2:
+                        if rsq < rMinSq:
                             break
                         elif rsq < 1.5*2:
                             nNei += 1
@@ -170,6 +181,9 @@ class MolObject(object):
         for i, atom in enumerate(newCoords):
             newCoords[i][0] = 1
 
+        newObj = MolObject()
+        accept = False
+        shift = 0.0
         cIndx = 0
         for i, atom in enumerate(coord1):
             if atom[plane+1] > cm1[plane]:
@@ -183,20 +197,19 @@ class MolObject(object):
                 newCoords[cIndx][0] = 2
                 for j, xyz in enumerate(atom[1:4]):
                     if j == plane:
-                        newCoords[cIndx][j+1] = coord2[i][j+1] - cm2[j] - offset
+                        newCoords[cIndx][j+1] = coord2[i][j+1] - cm2[j] - offset - shift
                     else:
                         newCoords[cIndx][j+1] = coord2[i][j+1] - cm2[j]
                 cIndx += 1
-
-
-
-        newObj = MolObject()
         newObj.setfeature(newCoords=newCoords)
+
+
+
 #        newObj.dumpfeature()
         newObj.computescore()
         if random() < 0.5:
             newObj.optimize()
-            newObj.dumpfeature()
+#            newObj.dumpfeature()
         return newObj
     #----------------------------------------------------
     def safetycheck(self):
@@ -217,7 +230,8 @@ class MolObject(object):
             rz = self.coords[i][3] - self.coords[j][3]
             rsq = rx*rx + ry*ry + rz*rz
             if rsq < 1.5**2:
-                if rsq < 0.5**2:
+                if rsq < rMinSq:
+#                    print i, j, rsq
                     return False
                 topolist[i][j] = True
                 topolist[j][i] = True
@@ -318,6 +332,7 @@ class MolObject(object):
             x0.append(item[2])
             x0.append(item[3])
 
+        newObj = MolObject()
         def simplify(parIn, *args):
             tempcoords = []
             cnt = 0
@@ -325,16 +340,17 @@ class MolObject(object):
                 tempcoords.append([self.coords[cnt][0], x, y, z])
                 cnt += 1
             
-            newObj = MolObject()
             newObj.setfeature(tempcoords)
             result = newObj.safetycheck()
+#            scores, eng = self.objfunc(newObj)
+#            return eng
             if result:
                 scores, eng = self.objfunc(newObj)
 #                return -scores
                 return eng
             else:
                 return 1e30
-        results = minimize(simplify, x0=x0, method='CG', options={'maxiter':1500, 'gtol':1e-1} )
+        results = minimize(simplify, x0=x0, method='CG', options={'maxiter':1000, 'gtol':1e-1} )
         finalcoords = []
         cnt = 0
         for x,y,z in grouper(3, results.x):
@@ -393,7 +409,10 @@ def objFunc(obj):
         LJ = 1.0/rsq
         LJ = LJ*LJ*LJ
         eng += 4.0*LJ*(LJ-1.0)
-    val = exp(-(eng+20.0)/temperature)
+    try:
+        val = exp(-(eng+35.0)/temperature)
+    except:
+        print eng
     return val, eng
 #============================================================
 def clustercriteria(obj, topolist):

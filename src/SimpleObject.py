@@ -1,6 +1,9 @@
 from random import random
 from math import exp, sqrt
 
+temperature = 10.5
+#temperature = 100.5
+#temperature = 5e3
 class RadialObj(object):
     #----------------------------------------------------
     def __init__(self, initial=False):
@@ -155,7 +158,8 @@ def objFunc(obj):
 #    r = x*x + y*y
 #    r = sqrt(r)
     eng = 20.0*((r-1.0)**2 * (r-5.0)**2 + 0.2*(r-1.0)**2)
-    val = obj.degen*exp(-eng/100.5)
+    val = exp(-eng/temperature)
+#    print eng, val
     return val, eng
 
 

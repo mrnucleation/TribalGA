@@ -5,11 +5,11 @@ class TribePool(object):
     #----------------------------------------------------
     def __init__(self):
         self.members = []
-        self.maxmem = 50000
+        self.maxmem = 5000
         self.nMinimize = 1
         self.groups = {}
-        self.famineTries = 500
-        self.warTries = 5
+        self.famineTries = int(round(self.maxmem/1.2))
+        self.warTries = 50
         self.tol = 0.05
         self.curID = 1
         self.filename = "Config_%s.xyz"
@@ -291,9 +291,12 @@ class TribePool(object):
                     for indx, item in enumerate(problist):
                         problist[indx] = problist[indx]/norm
                 except ZeroDivisionError:
-                    print("Normalization ERROR!")
-                    print(problist)
-                    raise ZeroDivisionError
+                    problist = [1.0/float(len(problist)) for x in problist]
+#                    print("Normalization ERROR!")
+#                    print(problist)
+      
+
+#                    raise ZeroDivisionError
 #                print problist
 
 
@@ -326,9 +329,12 @@ class TribePool(object):
                 for indx, item in enumerate(problist):
                     problist2[indx] = problist2[indx]/norm
             except ZeroDivisionError:
-                print( "Normalization ERROR!")
-                print( problist2)
-                raise ZeroDivisionError
+                problist2 = [1.0/float(len(problist)-1.0) for x in problist]
+                problist2[indx1] = 0.0
+#                print( "Normalization ERROR!")
+#                print( problist2)
+#                return
+#                raise ZeroDivisionError
 
 
             cnt = 0
@@ -461,9 +467,10 @@ class TribePool(object):
                     for indx, item in enumerate(problist):
                         problist[indx] = problist[indx]/norm
                 except ZeroDivisionError:
-                    print( "Normalization ERROR!")
-                    print( problist)
-                    raise ZeroDivisionError
+                    problist = [1.0/float(len(problist)) for x in problist]
+#                    print( "Normalization ERROR!")
+#                    print( problist)
+#                    raise ZeroDivisionError
 
 
             ranNum = random()
@@ -477,8 +484,10 @@ class TribePool(object):
 #            print problist
 #            print indx1, ranNum, sumInt
             
-
             group1 = canidates[indx1]
+            if len(self.groups[group1]) < 20:
+                continue
+
 
             if len(self.groups[group1]) == 1:
                 canidates.remove(group1)
@@ -551,10 +560,11 @@ class TribePool(object):
                 topscore = score
 
 
+        shiftconst = 0.0
         for item in group:
             score = item.getscore()
-            norm += topscore-score
-            problist.append(topscore-score)
+            norm += topscore-score+shiftconst
+            problist.append(topscore-score+shiftconst)
 
 #        print topscore
 #        print problist
@@ -562,8 +572,9 @@ class TribePool(object):
             for indx, item in enumerate(problist):
                 problist[indx] = problist[indx]/norm
         except ZeroDivisionError:
-            print( problist)
-            raise ZeroDivisionError
+            problist = [1.0/float(len(problist)) for x in problist]
+#            print( problist)
+#            raise ZeroDivisionError
 #        print problist
 #        print 
             
@@ -622,6 +633,26 @@ class TribePool(object):
                     for atom in feature:
                         outlist = [str(x) for x in atom] + ["\n"]
                         outfile.write(' '.join(outlist))
+    #----------------------------------------------------
+    def dumpranks(self, loopnum, limit):
+        outlist = []
+#        for key, item in self.groups.iteritems():
+        for key, item in self.groups.items():
+            total = 0.0
+            for member in item:
+                score = member.getscore()
+                total += score
+            outlist.append([key, total])
+        sortlist = sorted(outlist, key=lambda x: x[1], reverse=True)
+
+        for i, key in enumerate(sortlist[:limit]):
+            with open( "rank%s.dat" % (str(key[0])), "a" ) as outfile: 
+                outfile.write("%s %s\n"%(loopnum*1e-4,i+1))
+
+        for i, key in enumerate(sortlist):
+            with open( "score%s.dat" % (str(key[0])), "a" ) as outfile: 
+                outfile.write("%s %s\n"%(loopnum*1e-4,key[1]))
+
     #----------------------------------------------------
     def Minimize(self, logfile=None):
 #        sortList = sorted(self.members, key=lambda x: x.radialscore(), reverse=False)
