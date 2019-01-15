@@ -28,6 +28,7 @@ class StringObj(object):
         newObj = StringObj()
         newObj.setfeature(newStr)
         newObj.setconstraint(self.constraints)
+        newObj.set
         newObj.computescore()
         return newObj
      #----------------------------------------------------
@@ -153,6 +154,10 @@ class StringObj(object):
     def findgroup(self):
         groupID = 0
         return groupID
+    #----------------------------------------------------
+    def setObjective(self, objective):
+        self.objFunc = objective
+
     #----------------------------------------------------
     def setID(self, ID):
         self.ID = ID
