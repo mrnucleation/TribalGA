@@ -354,6 +354,12 @@ class MultiPool(object):
         return featlist
 
     #----------------------------------------------------
+    def checkcapacity(self):
+        if self.maxmem <= len(self.members):
+            return False
+        else:
+            return True
+    #----------------------------------------------------
     def setweights(self, newWeights):
         if len(newWeights) != self.nObj:
             raise ObjectiveMismatch("Number of weights passed does not match the number of objectives")
